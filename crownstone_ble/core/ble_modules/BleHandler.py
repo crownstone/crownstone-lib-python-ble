@@ -3,10 +3,11 @@ from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_RANDOM, BTLEException
 
 from threading import Timer
 
-from crownstone_core.Exceptions import CrownstoneBleException, BleError
-from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
+from crownstone_core.Exceptions import CrownstoneBleException
+from crownstone_core.protocol.BluenetTypes import ProcessType
 
+from crownstone_ble.Exceptions import BleError
 from crownstone_ble.constants import ScanBackends
 from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.core.bluetooth_delegates.AioScanDelegate import AioScanDelegate

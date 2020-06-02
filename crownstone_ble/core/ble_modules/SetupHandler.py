@@ -1,4 +1,5 @@
-from crownstone_core.Exceptions import CrownstoneBleException, BleError
+from crownstone_ble.Exceptions import BleError
+from crownstone_core.Exceptions import CrownstoneBleException
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.protocol.BluenetTypes import ProcessType, ResultValue
 from crownstone_core.protocol.Characteristics import SetupCharacteristics

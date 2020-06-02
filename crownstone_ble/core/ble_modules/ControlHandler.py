@@ -1,6 +1,7 @@
 import time
 from bluepy.btle import BTLEException
-from crownstone_core.Exceptions import CrownstoneException, BleError, CrownstoneBleException
+from crownstone_ble.Exceptions import BleError
+from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
 from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
