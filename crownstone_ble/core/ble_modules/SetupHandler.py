@@ -13,7 +13,7 @@ class SetupHandler:
     def __init__(self, bluetoothCore):
         self.core = bluetoothCore
 
-    def setup(self, address, sphereId, crownstoneId, meshAccessAddress, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+    def setup(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         characteristics = self.core.ble.getCharacteristics(CSServices.SetupService)
         try:
             self.fastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
@@ -83,5 +83,6 @@ class SetupHandler:
         sessionKey   = self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionKey)
         sessionNoncePacket = self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionData)
 
+        self.core.settings.loadSetupKey(sessionKey)
         ProcessSessionNoncePacket(sessionNoncePacket, sessionKey, self.core.settings)
 
