@@ -1,6 +1,5 @@
-from enum import Enum
 
-class BleTopics(Enum):
+class BleTopics:
     advertisement         = "advertisement"         #
     verifiedAdvertisement = "verifiedAdvertisement" #
     iBeaconAdvertisement  = "iBeaconAdvertisement"  #
