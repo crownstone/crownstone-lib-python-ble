@@ -17,6 +17,9 @@ class BroadcastHandler:
         self.broadcaster = Broadcaster(hciIndex, self.core.settings)
 
     def switchCrownstone(self, sphereUID, crownstoneId, switchState):
+        """
+        switchState is in the range of [0 .. 1]
+        """
         convertedSwitchState = int(min(1, max(0, switchState)) * 100)
         self._switchCrownstone(sphereUID, crownstoneId, convertedSwitchState)
 
@@ -27,7 +30,9 @@ class BroadcastHandler:
         self._switchCrownstone(sphereUID, crownstoneId, 0)
 
     def _switchCrownstone(self, sphereUID, crownstoneId, switchState):
-        convertedSwitchState = int(min(1, max(0, switchState)) * 100)
+        """
+        Switchstate here is conforming to the Crownstone protocol, range 0..255
+        """
         stoneSwitchPackets = [[crownstoneId, convertedSwitchState]]
 
         packet = [BroadcastTypes.MULTI_SWITCH.value, len(stoneSwitchPackets) * 2]

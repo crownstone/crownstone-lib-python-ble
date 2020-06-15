@@ -3,15 +3,14 @@
 
 import time
 
-from BluenetLib import ScanBackends
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 print("===========================================\n\nStarting Example\n\n===========================================")
 print("This is an example that looks for a close Crownstone, and attempts to recover it.\n")
 
 # Initialize the Bluetooth Core.
 # Fill in the correct hciIndex, see the readme.
-core = BluenetBle(hciIndex=0)
+core = CrownstoneBle(hciIndex=0)
 
 print("We're loading some default encryption keys into the library: \"adminKeyForCrown\", \"memberKeyForHome\", \"basicKeyForOther\", \"MyServiceDataKey\", \"aLocalizationKey\", \"MyGoodMeshAppKey\", \"MyGoodMeshNetKey\".\n")
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")

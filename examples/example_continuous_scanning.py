@@ -7,7 +7,7 @@ import time
 import json
 
 # Function that's called when new information is received from Crownstones with use the keys you provide in core.setSettings
-from crownstone_ble.core.CrownstoneBle import CrownstoneBle
+from crownstone_ble import CrownstoneBle
 
 
 def showNewData(data):

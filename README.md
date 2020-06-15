@@ -1,4 +1,4 @@
-# Bluenet BLE
+# Crownstone BLE
 
 ### This only works on linux due to the usage of BlueZ.
 
@@ -15,11 +15,11 @@ We need libbluetooth-dev for developing with BLE.
 sudo apt-get install build-essential libbluetooth-dev libglib2.0-dev python3-setuptools python3.7-dev
 ```
 
-# Installing Bluenet BLE
+# Installing Crownstone BLE
 
-If you want to use python virtual environments, take a look at the [README_VENV](https://github.com/crownstone/bluenet-python-lib/blob/master/README_VENV.MD)
+If you want to use python virtual environments, take a look at the [README_VENV](/README_VENV.MD)
 
-You can use the setupBLE.py to install Bluenet + BluenetBLE. If you are on other platforms than Linux, you can use setup.py to install just Bluenet.
+You can use the setup.py to install CrownstoneBLE. If you are on other platforms than Linux, you can use setup.py to install just Crownstone.
 
 ```
 sudo python3 setupBLE.py install
@@ -41,25 +41,25 @@ sudo python3 ./examples/examplesBle/example_continuous_scanning.py
 
 # Documentation
 
-To use Bluenet BLE, you first import it from Bluenetlib.
+To use Crownstone BLE, you first import it from crownstone_ble.
 
 ```python
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble.BLE import CrownstoneBle
 
-myBluenetBle = BluenetBle(hciIndex=0)
+ble = CrownstoneBle(hciIndex=0)
 ```
 
-BluenetBle is composed of a number of top level methods and modules for specific commands. We will first describe these top level methods.
+CrownstoneBle is composed of a number of top level methods and modules for specific commands. We will first describe these top level methods.
 
 
 ##### `__init__(hciIndex=0)`
-> When initializing the BluenetBle class, you can provide an hciIndex. On linux, 0 means /dev/hci0, 1 /dev/hci1 etc. Usually 0 is the right one. You can check which one you need with:
+> When initializing the CrownstoneBle class, you can provide an hciIndex. On linux, 0 means /dev/hci0, 1 /dev/hci1 etc. Usually 0 is the right one. You can check which one you need with:
 > ```
 > hciconfig
 > ```
 > The constructor is not explicitly called with __init__, but like this:
 >```python
->myBluenetBle = BluenetBle(hciIndex=0)
+>ble = CrownstoneBle(hciIndex=0)
 >```
 
 
@@ -87,16 +87,15 @@ These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a 
 >  "meshNetworkKey":  "MyGoodMeshNetKey",
 >}
 >```
-address, sphereId, crownstoneId, meshAccessAddress, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor
+
 ##### `connect(address: string)`
 > This will connect to the Crownstone with the provided MAC address. You get get this address by scanning or getting the nearest Crownstone. More on this below.
 
-##### `setupCrownstone(address: string, sphereId: int, crownstoneId: int, meshAccessAddress: string, meshDeviceKey: string, ibeaconUUID: string, ibeaconMajor: uint16, ibeaconMinor: uint16)`
+##### `setupCrownstone(address: string, sphereId: int, crownstoneId: int, meshDeviceKey: string, ibeaconUUID: string, ibeaconMajor: uint16, ibeaconMinor: uint16)`
 > New Crownstones are in setup mode. In this mode they are open to receiving encryption keys. This method facilitates this process. No manual connection is required.
 > - address is the MAC address.
 > - sphereId is a uint8 id for this Crownstone's sphere (Required for FW 3.0.0+)
 > - crownstoneId is a uint8 id for this Crownstone
-> - meshAccessAddress is a uint32 with a number of requirements. All Crownstones with a shared meshAccessAddress can receive each others messages. Keep in mind that they need a shared keyset to understand the messages. To facilitate the creation of an access address, there is a util function available. More on this at the Util section. !!LEGACY for FW < 3.0.0!!
 > - meshDeviceKey is a 16 character string (Required for FW 3.0.0+)
 > - ibeaconUUID is a string like "d8b094e7-569c-4bc6-8637-e11ce4221c18"
 > - ibeaconMajor is a number between 0 and 65535
@@ -141,15 +140,15 @@ address, sphereId, crownstoneId, meshAccessAddress, meshDeviceKey, ibeaconUUID, 
 
 The modules contain groups of methods. You can access them like this:
 ```python
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 # initialize the Bluetooth Core
-bluenetBle = BluenetBle()
+ble = CrownstoneBle()
 
 # set the switch stat eusing the control module
-bluenetBle.connect(address)
-bluenetBle.control.setSwitchState(0)
-bluenetBle.disconnect()
+ble.connect(address) # address is a mac address
+ble.control.setSwitchState(0)
+ble.disconnect()
 ```
 
 
@@ -179,15 +178,15 @@ This is used to get state variables from the Crownstone. [https://github.com/cro
 
 The modules contain groups of methods. You can access them like this:
 ```python
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 # initialize the Bluetooth Core
-bluenetBle = BluenetBle()
+ble = CrownstoneBle()
 
 # set the switch state using the control module
-bluenetBle.connect(address)
-switchstate = bluenetBle.state.getSwitchState()
-bluenetBle.disconnect()
+ble.connect(address)
+switchstate = ble.state.getSwitchState()
+ble.disconnect()
 ```
 
 
@@ -198,34 +197,13 @@ bluenetBle.disconnect()
 ##### `getTime()`
 > Get the time on the Crownstone as a timestamp since epoch in seconds. This has been corrected for location.
 
-## Util
-
-Util contains a number (one right now) methods that will help you use the lib.
-
-##### generateMeshAccessAddress()
-> !! LEGACY !! This will be deprecated for firmwares 3.0.0 and higher.
-> Generate the mesh access address used in the setup. It adheres to the requirements as per the Bluetooth spec:
-> BLE specification's rules are defined in Core spec 4.2 Vol. 6 Part B Chapter 2.1.2 and are as follows:
-> The initiator shall ensure that the Access Address meets the following requirements:
-> - It shall not be the advertising channel packets’ Access Address.
-> - It shall not have all four octets equal.
-> - It shall not be a sequence that differs from the advertising channel packets’ Access Address by only one bit.
-> - It shall have no more than six consecutive zeros or ones.
-> - It shall have no more than 24 transitions.
-> - It shall have a minimum of two transitions in the most significant six bits.
-
-```python
-from BluenetLib import Util
-
-accessAddress = Util.generateMeshAccessAddress()
-```
 
 ## EventBus
 
 You can obtain the eventBus directly from the lib:
 
 ```
-from BluenetLib import BluenetEventBus, Topics
+from CrownstoneLib import CrownstoneEventBus, Topics
 ```
 
 ##### `subscribe(TopicName: enum, functionPointer)`
@@ -244,10 +222,10 @@ def showNewData(data):
 
 
 # Set up event listeners
-BluenetEventBus.subscribe(Topics.newDataAvailable, showNewData)
+CrownstoneEventBus.subscribe(Topics.newDataAvailable, showNewData)
 
 # unsubscribe again
-BluenetEventBus.unsubscribe(subscriptionId)
+CrownstoneEventBus.unsubscribe(subscriptionId)
 ```
 
 ## Events

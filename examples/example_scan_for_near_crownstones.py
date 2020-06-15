@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-import time
 import argparse
-
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 parser = argparse.ArgumentParser(description='Search for any Crownstone and print their information')
 parser.add_argument('--hciIndex', dest='hciIndex', metavar='I', type=int, nargs='?', default=0,
@@ -18,7 +16,7 @@ print("===========================================\n\nStarting Example\n\n======
 print("\nThis is an example that scans for any Crownstone, and prints the results.\n")
 
 # Initialize the Bluetooth Core.
-core = BluenetBle(hciIndex=args.hciIndex)
+core = CrownstoneBle(hciIndex=args.hciIndex)
 core.loadSettingsFromFile(args.keyFile)
 
 print("Searching for Crownstones in range, this will take a while.\n")

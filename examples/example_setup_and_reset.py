@@ -3,10 +3,7 @@
 import time
 import argparse
 
-from BluenetLib import ScanBackends
-from BluenetLib.BLE import BluenetBle
-
-from BluenetLib.lib.util.JsonFileStore import JsonFileStore
+from crownstone_ble import CrownstoneBle, ScanBackends
 
 parser = argparse.ArgumentParser(description='Search for any Crownstone and print their information')
 parser.add_argument('--hciIndex', dest='hciIndex', metavar='I', type=int, nargs='?', default=0,
@@ -21,7 +18,7 @@ print("===========================================\n\nStarting Example\n\n======
 print("This is an example that performs the setup of a Crownstone, and then factory resets it again.\n")
 
 # Initialize the Bluetooth Core.
-core = BluenetBle(hciIndex=args.hciIndex, scanBackend=ScanBackends.Bluepy)
+core = CrownstoneBle(hciIndex=args.hciIndex, scanBackend=ScanBackends.Bluepy)
 core.loadSettingsFromFile(args.keyFile)
 
 print("Searching for the nearest setup Crownstone. This is with a threshold of RSSI: -100, so it will use any available setup Crownstones.\n")
@@ -43,7 +40,6 @@ if nearestStone is not None:
         crownstoneId=1,
         sphereId=1,  #required FW 3+
         meshDeviceKey="IamTheMeshKeyJey",  #required FW 3+
-        meshAccessAddress="4f745905", #legacy < FW 3
         ibeaconUUID="1843423e-e175-4af0-a2e4-31e32f729a8a",
         ibeaconMajor=123,
         ibeaconMinor=456

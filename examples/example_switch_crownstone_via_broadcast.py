@@ -2,18 +2,14 @@
 
 """An example that turns on a Crownstone with given MAC address."""
 
-import time
-
-from BluenetLib.lib.util.Conversion import Conversion
-
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 print("===========================================\n\nStarting Example\n\n===========================================")
 
 # Initialize the Bluetooth Core.
 # Fill in the correct hciIndex, see the readme.
 # Fill in the correct keys, see the readme.
-core = BluenetBle(hciIndex=0)
+core = CrownstoneBle(hciIndex=0)
 print("We're loading some default encryption keys into the library: \"adminKeyForCrown\", \"memberKeyForHome\", \"basicKeyForOther\", \"MyServiceDataKey\", \"aLocalizationKey\", \"MyGoodMeshAppKey\", \"MyGoodMeshNetKey\".\n")
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
@@ -29,18 +25,13 @@ core.setSettings(
 
 # get the SphereUID from somewhere
 sphereUID = 253
+# select the uid of the crownstone to switch
 crownstoneId = 5
-state = 3
+state = 0 # 0 = off, you can choose anything between [0..1]
 
-core.broadcast.switchCrownstone(sphereUID, crownstoneId, 0)
+core.broadcast.switchCrownstone(sphereUID, crownstoneId, state)
 
 core.shutDown()
-
-
-
-
-
-
 
 print("===========================================\n\nFinished Example\n\n===========================================")
 

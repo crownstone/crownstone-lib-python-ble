@@ -2,10 +2,8 @@
 
 """An example that turns on a Crownstone with given MAC address."""
 
-import time
 import argparse
-
-from BluenetLib.BLE import BluenetBle
+from crownstone_ble import CrownstoneBle
 
 parser = argparse.ArgumentParser(description='Search for any Crownstone and print their information')
 parser.add_argument('--hciIndex', dest='hciIndex', metavar='I', type=int, nargs='?', default=0,
@@ -23,8 +21,8 @@ args = parser.parse_args()
 print("===========================================\n\nStarting Example\n\n===========================================")
 
 # Initialize the Bluetooth Core.
-core = BluenetBle(hciIndex=args.hciIndex)
-core.loadSettingsFromFile(args.keyFile);
+core = CrownstoneBle(hciIndex=args.hciIndex)
+core.loadSettingsFromFile(args.keyFile)
 
 print("Connecting to", args.bleAddress)
 
