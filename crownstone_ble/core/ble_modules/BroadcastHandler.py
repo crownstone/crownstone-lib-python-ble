@@ -33,7 +33,7 @@ class BroadcastHandler:
         """
         Switchstate here is conforming to the Crownstone protocol, range 0..255
         """
-        stoneSwitchPackets = [[crownstoneId, convertedSwitchState]]
+        stoneSwitchPackets = [[crownstoneId, switchState]]
 
         packet = [BroadcastTypes.MULTI_SWITCH.value, len(stoneSwitchPackets) * 2]
         for switchPacket in stoneSwitchPackets:
