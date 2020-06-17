@@ -22,7 +22,7 @@ If you want to use python virtual environments, take a look at the [README_VENV]
 You can use the setup.py to install CrownstoneBLE. If you are on other platforms than Linux, you can use setup.py to install just Crownstone.
 
 ```
-sudo python3 setupBLE.py install
+sudo python3 setup.py install
 ```
 
 Allow non-sudo use of the ble scanner
