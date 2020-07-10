@@ -58,8 +58,8 @@ class CrownstoneBle:
         self.setSettings(data["admin"], data["member"], data["basic"], data["serviceDataKey"], data["localizationKey"], data["meshApplicationKey"], data["meshNetworkKey"])
         
 
-    def connect(self, address, ignoreEncryption=False):
-        self.ble.connect(address)
+    def connect(self, address, ignoreEncryption=False, connectionSettings=None):
+        self.ble.connect(address, connectionSettings)
         if not ignoreEncryption:
             try:
                 self.control.getAndSetSessionNone()

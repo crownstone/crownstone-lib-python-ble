@@ -56,7 +56,7 @@ class BleHandler:
         self.validator.shutDown()
     
     
-    def connect(self, address):
+    def connect(self, address, connectionSettings = None):
         if address not in self.connectedPeripherals:
             self.connectedPeripherals[address] = Peripheral(iface=self.hciIndex)
             print("Connecting...")
@@ -64,6 +64,10 @@ class BleHandler:
             self.connectedPeripherals[address].connect(address, addrType=ADDR_TYPE_RANDOM, iface=self.hciIndex)
             self.connectedPeripherals[address].getServices()
             print("Connected")
+            if connectionSettings is not None:
+                if connectionSettings.mtu:
+                    print("Set MTU")
+                    self.connectedPeripherals[address].setMTU(connectionSettings.mtu)
             
     
     def disconnect(self):

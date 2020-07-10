@@ -1,5 +1,8 @@
 import time
 from bluepy.btle import BTLEException
+from crownstone_core.packets.MicroappPacket import MicroappPacketInternal
+from crownstone_core.protocol.BluenetTypes import ProcessType
+
 from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
@@ -104,6 +107,74 @@ class ControlHandler:
         else:
             raise CrownstoneException(BleError.NOT_IN_RECOVERY_MODE, "The recovery mechanism has expired. It is only available briefly after the Crownstone is powered on.")
 
+    def sendMicroapp(self, data):
+        """
+        :param data: byte array
+        """
+        self._microapp = MicroappPacketInternal(data)
+        self.sendMicroappInternal(True)
+
+    def sendMicroappInternal(self, firstTime, notificationResult=None):
+        if not firstTime:
+
+            if not self._microapp.nextAvailable():
+                print("LOG: Finish stream")
+                return ProcessType.FINISHED
+
+            self._microapp.update()
+
+        # logStr = "LOG: write part %i of %i (size = %i)\n" % (self._microapp.index + 1, self._microapp.count, self._microapp.data.size)
+        # sys.stdout.write(logStr);
+
+        if firstTime:
+            timeout = self._microapp.count * 10
+            print("LOG: Use (for the overall connection) a timeout of", timeout)
+
+            self.core.ble.setupNotificationStream(
+                CSServices.CrownstoneService,
+                CrownstoneCharacteristics.Result,
+                lambda: self._writeControlPacket(ControlPacketsGenerator.getMicroAppPacket(
+                    self._microapp.getPacket())),
+                lambda notificationResult: self._handleResult(notificationResult),
+                timeout
+            )
+        else:
+            self._writeControlPacket(ControlPacketsGenerator.getMicroAppPacket(
+                    self._microapp.getPacket()))
+            return ProcessType.CONTINUE
+
+    def enableMicroapp(self, offset):
+        """
+        :param data: byte array
+        """
+        self._writeControlPacket(ControlPacketsGenerator.getMicroAppMetaPacket(self._microapp.getMetaPacket(offset)))
+
+    def _handleResult(self, notificationResult):
+        if notificationResult:
+            print(notificationResult)
+            err_code = notificationResult[2]
+            # Only print atypical error codes
+            if err_code != 0x00 and err_code != 0x01:
+                print("Err code" , err_code)
+
+            # Display type of return code (error)
+            if err_code == 0x20:
+                print("LOG: ERR_WRONG_PAYLOAD_LENGTH")
+            if err_code == 0x70:
+                print("LOG: ERR_EVENT_UNHANDLED")
+            if err_code == 0x10:
+                print("LOG: NRF_ERROR_INVALID_ADDR")
+            if err_code == 0x27:
+                print("LOG: ERR_BUSY")
+            if err_code == 0x22:
+                print("LOG: ERR_INVALID_MESSAGE")
+
+            # Normal error codes (first wait for success, then success)
+            if err_code == 0x01:
+                print("LOG: ERR_WAIT_FOR_SUCCESS")
+            if err_code == 0x00:
+                print("LOG: ERR_SUCCESS")
+                return self.sendMicroappInternal(False, notificationResult)
 
     #  self.bleManager.readCharacteristic(CSServices.CrownstoneService, characteristicId: CrownstoneCharacteristics.FactoryReset)
     # {(result:[UInt8]) -> Void in
