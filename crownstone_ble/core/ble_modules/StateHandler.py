@@ -12,9 +12,11 @@ class StateHandler:
         self.core = bluetoothCore
         
     def getSwitchState(self):
+        # TODO: check result code
         return self._getState(StateType.SWITCH_STATE)[0]
     
     def getSwitchStateFloat(self):
+        # TODO: check result code
         switchState = self._getState(StateType.SWITCH_STATE)[0]
         
         returnState = 0.0
@@ -26,6 +28,7 @@ class StateHandler:
         return returnState
     
     def getTime(self):
+        # TODO: check result code
         bytesResult = self._getState(StateType.TIME)
         return Conversion.uint8_array_to_uint32(bytesResult)
     
