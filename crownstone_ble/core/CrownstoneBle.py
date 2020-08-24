@@ -11,6 +11,7 @@ from crownstone_ble.core.ble_modules.BroadcastHandler import BroadcastHandler
 from crownstone_ble.core.ble_modules.ControlHandler import ControlHandler
 from crownstone_ble.core.ble_modules.SetupHandler import SetupHandler
 from crownstone_ble.core.ble_modules.StateHandler import StateHandler
+from crownstone_ble.core.ble_modules.DebugHandler import DebugHandler
 from crownstone_ble.core.modules.Gatherer import Gatherer
 from crownstone_ble.core.modules.NearestSelector import NearestSelector
 from crownstone_ble.core.modules.NormalModeChecker import NormalModeChecker
@@ -27,6 +28,7 @@ class CrownstoneBle:
         self.broadcast = BroadcastHandler(self, hciIndex)
         self.setup     = SetupHandler(self)
         self.state     = StateHandler(self)
+        self.debug     = DebugHandler(self)
         self.ble       = BleHandler(self.settings, hciIndex, scanBackend)
         
     def shutDown(self):
