@@ -196,7 +196,7 @@ class BleHandler:
         self.notificationLoopActive = True
 
         loopCount = 0
-        while self.notificationLoopActive and loopCount < 10:
+        while self.notificationLoopActive and loopCount < 20:
             peripheral.waitForNotifications(0.5)
             loopCount += 1
 
