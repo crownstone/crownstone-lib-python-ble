@@ -12,14 +12,42 @@ from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.Exceptions import CrownstoneError, CrownstoneException
 from crownstone_core.protocol.BluenetTypes import ResultValue
-from crownstone_core.packets.PowerSamplesPacket import PowerSamplesPacket
+from crownstone_core.protocol.ControlPackets import ControlPacket, ControlType
+from crownstone_core.util.Conversion import Conversion
+from crownstone_core.packets.debug.PowerSamplesPacket import PowerSamplesPacket
+from crownstone_core.packets.debug.AdcRestartsPacket import AdcRestartsPacket
+from crownstone_core.packets.debug.AdcChannelSwapsPacket import AdcChannelSwapsPacket
 
 class DebugHandler:
 	def __init__(self, bluetoothCore):
 		self.core = bluetoothCore
 
+	def getUptime(self):
+		""" Get the uptime of the crownstone in seconds. """
+		controlPacket = ControlPacket(ControlType.GET_UPTIME).getPacket()
+		result = self._writeControlAndGetResult(controlPacket)
+		if result.resultCode != ResultValue.SUCCESS:
+			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
+		return Conversion.uint8_array_to_uint32(result.payload)
+
+	def getAdcRestarts(self):
+		"""	Get number of ADC restarts since boot. Returns an AdcRestartsPacket. """
+		controlPacket = ControlPacket(ControlType.GET_ADC_RESTARTS).getPacket()
+		result = self._writeControlAndGetResult(controlPacket)
+		if result.resultCode != ResultValue.SUCCESS:
+			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
+		return AdcRestartsPacket(result.payload)
+
+	def getAdcChannelSwaps(self):
+		""" Get number of ADC channel swaps since boot. Returns an AdcChannelSwapsPacket. """
+		controlPacket = ControlPacket(ControlType.GET_ADC_CHANNEL_SWAPS).getPacket()
+		result = self._writeControlAndGetResult(controlPacket)
+		if result.resultCode != ResultValue.SUCCESS:
+			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
+		return AdcChannelSwapsPacket(result.payload)
+
 	def getPowerSamples(self, samplesType):
-		""" Get all power samples of the given type. """
+		""" Get all power samples of the given type. Returns a list of PowerSamplesPacket. """
 		allSamples = []
 		index = 0
 		while True:
@@ -34,11 +62,11 @@ class DebugHandler:
 				raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
 
 	def getPowerSamplesAtIndex(self, samplesType, index):
-		""" Get power samples of given type at given index. """
+		""" Get power samples of given type at given index. Returns a PowerSamplesPacket. """
 		result = self._getPowerSamples(samplesType, index)
 		if (result.resultCode != ResultValue.SUCCESS):
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
-		return result
+		return PowerSamplesPacket(result.payload)
 
 	def _getPowerSamples(self, samplesType, index):
 		""" Get power samples of given type at given index, but don't check result code. """
