@@ -17,6 +17,7 @@ from crownstone_core.util.Conversion import Conversion
 from crownstone_core.packets.debug.PowerSamplesPacket import PowerSamplesPacket
 from crownstone_core.packets.debug.AdcRestartsPacket import AdcRestartsPacket
 from crownstone_core.packets.debug.AdcChannelSwapsPacket import AdcChannelSwapsPacket
+from crownstone_core.packets.debug.SwitchHistoryPacket import SwitchHistoryListPacket, SwitchHistoryItemPacket
 
 class DebugHandler:
 	def __init__(self, bluetoothCore):
@@ -45,6 +46,14 @@ class DebugHandler:
 		if result.resultCode != ResultValue.SUCCESS:
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
 		return AdcChannelSwapsPacket(result.payload)
+
+	def getSwitchHistory(self):
+		""" Get the switch history. Returns a SwitchHistoryListPacket. """
+		controlPacket = ControlPacket(ControlType.GET_SWITCH_HISTORY).getPacket()
+		result = self._writeControlAndGetResult(controlPacket)
+		if result.resultCode != ResultValue.SUCCESS:
+			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
+		return SwitchHistoryListPacket(result.payload)
 
 	def getPowerSamples(self, samplesType):
 		""" Get all power samples of the given type. Returns a list of PowerSamplesPacket. """
