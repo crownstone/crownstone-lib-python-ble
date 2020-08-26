@@ -1,35 +1,38 @@
 #!/usr/bin/env python3
 
-"""An example that turns on a Crownstone with given MAC address."""
+"""An example that switches a Crownstone via broadcast."""
 
+import argparse
 from crownstone_ble import CrownstoneBle
 
 print("===========================================\n\nStarting Example\n\n===========================================")
 
+parser = argparse.ArgumentParser(description='Switch a Crownstone via broadcast.')
+parser.add_argument('-H', '--hciIndex', dest='hciIndex', type=int, nargs='?', default=0,
+        help='The hci index of the BLE chip')
+parser.add_argument('-U', '--sphere', dest='sphereUid', type=int, nargs='?', default=0,
+        help='The sphere UID')
+parser.add_argument('-I', '--id', dest='stoneId', type=int, nargs='?', default=0,
+        help='The crownstone ID')
+parser.add_argument('-k', '--keyfile', dest='keyFile', type=str, nargs='?', default='example_key_file.txt',
+        help='The json file with keys.')
+parser.add_argument('switchCmd', type=int,
+        help='Turn on/off [1/0].')
+
+args = parser.parse_args()
+print("Using hci:", args.hciIndex, ", sphere UID:", args.sphereUid, ", crownstone ID:", args.stoneId, ", key file:", args.keyFile)
+
+
 # Initialize the Bluetooth Core.
-# Fill in the correct hciIndex, see the readme.
-# Fill in the correct keys, see the readme.
-core = CrownstoneBle(hciIndex=0)
-print("We're loading some default encryption keys into the library: \"adminKeyForCrown\", \"memberKeyForHome\", \"basicKeyForOther\", \"MyServiceDataKey\", \"aLocalizationKey\", \"MyGoodMeshAppKey\", \"MyGoodMeshNetKey\".\n")
-core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
+core = CrownstoneBle(hciIndex=args.hciIndex)
+core.loadSettingsFromFile(args.keyFile)
 
-core.setSettings(
-    "74158b0fcd8f9e881af352155dfe8591",
-    "5a8af34ecaccffc9cbc330d2020b73b8",
-    "d28c6fa28b15fe45616c1a9097a718db",
-    "fde40811c90ce46823d7ae38d5124cd3",
-    "6633f4e46601b17c604588f0d9b47725",
-    "5a293bdb0a5af45b2b1fdb42dde18ac5",
-    "7ae4f61214077fa8f04fc4d61f736fc7"
-)
-
-# get the SphereUID from somewhere
-sphereUID = 253
-# select the uid of the crownstone to switch
-crownstoneId = 5
-state = 0 # 0 = off, you can choose anything between [0..1]
-
-core.broadcast.switchCrownstone(sphereUID, crownstoneId, state)
+try:
+    print("Broadcast switch command", args.switchCmd)
+    core.broadcast.switchCrownstone(args.sphereUid, args.stoneId, args.switchCmd)
+except Exception as err:
+    print("Failed to broadcast, maybe try to run with sudo?")
+    print("Error:", err)
 
 core.shutDown()
 
