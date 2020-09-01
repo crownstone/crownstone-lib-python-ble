@@ -35,7 +35,7 @@ class BroadcastHandler:
         """
         stoneSwitchPackets = [[crownstoneId, switchState]]
 
-        packet = [BroadcastTypes.MULTI_SWITCH.value, len(stoneSwitchPackets) * 2]
+        packet = [BroadcastTypes.MULTI_SWITCH.value, len(stoneSwitchPackets)]
         for switchPacket in stoneSwitchPackets:
             packet += switchPacket
 
