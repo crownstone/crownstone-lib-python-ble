@@ -1,4 +1,4 @@
-from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_RANDOM, BTLEException
+from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_RANDOM, BTLEException, BTLEDisconnectError
 
 
 from threading import Timer
@@ -47,29 +47,46 @@ class BleHandler:
         else:
             self.scanner = Scanner(self.hciIndex).withDelegate(ScanDelegate(settings))
         self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScanning()))
-        
-    
+
+
     def shutDown(self):
         for subscriptionId in self.subscriptionIds:
             BleEventBus.unsubscribe(subscriptionId)
-            
+
         self.validator.shutDown()
-    
-    
+
+
     def connect(self, address, connectionSettings = None):
         if address not in self.connectedPeripherals:
             self.connectedPeripherals[address] = Peripheral(iface=self.hciIndex)
             print("Connecting...")
             self.connectedPeripheral = address
-            self.connectedPeripherals[address].connect(address, addrType=ADDR_TYPE_RANDOM, iface=self.hciIndex)
-            self.connectedPeripherals[address].getServices()
+            try:
+                self.connectedPeripherals[address].connect(address, addrType=ADDR_TYPE_RANDOM, iface=self.hciIndex)
+            except BTLEDisconnectError:
+                print("Disconnect error")
+                return False
+            except Exception as err:
+                print("Unknown error")
+                raise err
+                return False
+
+            try:
+                self.connectedPeripherals[address].getServices()
+            except Exception as err:
+                print("Unknown error")
+                raise err
+                return False
+
             print("Connected")
             if connectionSettings is not None:
                 if connectionSettings.mtu:
                     print("Set MTU")
                     self.connectedPeripherals[address].setMTU(connectionSettings.mtu)
-            
-    
+            return True
+        print("Already connected")
+        return True
+
     def disconnect(self):
         print("Disconnecting... Cleaning up")
         if self.connectedPeripheral:
@@ -77,8 +94,8 @@ class BleHandler:
             del self.connectedPeripherals[self.connectedPeripheral]
             self.connectedPeripheral = None
             print("Cleaned up")
-    
-    
+
+
     def startScanning(self, scanDuration=3):
         if not self.scanningActive:
             self.scanningActive = True

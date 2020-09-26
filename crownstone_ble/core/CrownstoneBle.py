@@ -61,7 +61,7 @@ class CrownstoneBle:
         
 
     def connect(self, address, ignoreEncryption=False, connectionSettings=None):
-        self.ble.connect(address, connectionSettings)
+        result = self.ble.connect(address, connectionSettings)
         if not ignoreEncryption:
             try:
                 self.control.getAndSetSessionNone()
@@ -69,6 +69,8 @@ class CrownstoneBle:
                 # the only relevant error here is this one. If it is any other, the Crownstone is in the wrong mode
                 if err.type is BleError.COULD_NOT_VALIDATE_SESSION_NONCE:
                     raise err
+                    result = False
+        return result
 
 
     def setupCrownstone(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
