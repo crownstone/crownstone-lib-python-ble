@@ -12,7 +12,7 @@ This library works with Python 3.5 and higher. It does not work with Python 3.4.
 We need libbluetooth-dev for developing with BLE.
 
 ```
-sudo apt-get install build-essential libbluetooth-dev libglib2.0-dev python3-setuptools python3.7-dev
+sudo apt-get install build-essential libbluetooth-dev libglib2.0-dev python3-setuptools python3-dev
 ```
 
 # Installing Crownstone BLE
@@ -33,10 +33,17 @@ sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/local/lib/python3.7/site-packag
 
 # Running Example
 
-All scripts containing BLE should be run as sudo because scanning using BlueZ requires root rights.
+You either have to run example scripts as `sudo`:
 
 ```
-sudo python3 ./examples/examplesBle/example_continuous_scanning.py
+sudo python3 ./examples/example_continuous_scanning.py
+```
+
+Or you have to manually give permissions first:
+
+```
+sudo setcap 'cap_net_raw,cap_net_admin+eip' ./examples/example_continuous_scanning.py
+python3 ./examples/example_continuous_scanning.py
 ```
 
 # Documentation
