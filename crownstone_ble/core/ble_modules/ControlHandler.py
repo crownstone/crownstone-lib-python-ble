@@ -1,6 +1,5 @@
 import time
-from bluepy.btle import BTLEException
-from crownstone_core.packets.MicroappPacket import MicroappPacketInternal
+from bluepy.btle import BTLEException, BTLEDisconnectError
 from crownstone_core.protocol.BluenetTypes import ProcessType
 
 from crownstone_ble.Exceptions import BleError
@@ -11,6 +10,7 @@ from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
 from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
 
+from crownstone_core.packets.MicroappPacket import MicroappPacketInternal, MicroappRequestPacket, MicroappValidatePacket, MicroappEnablePacket
 
 class ControlHandler:
     def __init__(self, bluetoothCore):
@@ -56,14 +56,25 @@ class ControlHandler:
         Force the Crownstone to disconnect from you.
         """
         try:
+            #print("Send disconnect command")
             self._writeControlPacket(ControlPacketsGenerator.getDisconnectPacket())
-            self.core.ble.disconnect()
-        except BTLEException as err:
-            if err.code is BTLEException.DISCONNECTED:
-                pass
-            else:
-                raise err
+        except BTLEDisconnectError:
+            print("Disconnect (expected)")
+            pass
+        except Exception as err:
+            #print("Unknown error")
+            raise err
 
+        try:
+            # Disconnect from this side as well.
+            #print("Disconnect from this side as well")
+            self.core.ble.disconnect()
+        except BTLEDisconnectError:
+            print("Disconnect (expected)")
+            pass
+        except Exception as err:
+            #print("Unknown error")
+            raise err
 
 
     def lockSwitch(self, lock):
@@ -133,21 +144,46 @@ class ControlHandler:
             self.core.ble.setupNotificationStream(
                 CSServices.CrownstoneService,
                 CrownstoneCharacteristics.Result,
-                lambda: self._writeControlPacket(ControlPacketsGenerator.getMicroAppPacket(
+                lambda: self._writeControlPacket(ControlPacketsGenerator.getMicroAppUploadPacket(
                     self._microapp.getPacket())),
                 lambda notificationResult: self._handleResult(notificationResult),
                 timeout
             )
         else:
-            self._writeControlPacket(ControlPacketsGenerator.getMicroAppPacket(
+            # Notification handler already set up, no need to do it again
+            self._writeControlPacket(ControlPacketsGenerator.getMicroAppUploadPacket(
                     self._microapp.getPacket()))
             return ProcessType.CONTINUE
 
-    def enableMicroapp(self, offset):
-        """
-        :param data: byte array
-        """
-        self._writeControlPacket(ControlPacketsGenerator.getMicroAppMetaPacket(self._microapp.getMetaPacket(offset)))
+
+    def enableMicroapp(self, packet):
+        self._packet = MicroappEnablePacket(packet)
+        print("Enable microapp")
+        self._writeControlPacket(ControlPacketsGenerator.getMicroAppEnablePacket(self._packet))
+
+    def requestMicroapp(self, command):
+        self._packet = MicroappRequestPacket(command)
+        print("Send microapp request")
+        self._writeControlPacket(ControlPacketsGenerator.getMicroAppRequestPacket(self._packet))
+
+#        # Get response
+#        timeout = self._microapp.count * 10
+#
+#        self.core.ble.setupNotificationStream(
+#            CSServices.CrownstoneService,
+#            CrownstoneCharacteristics.Result,
+#            lambda: self._writeControlPacket(
+#                ControlPacketsGenerator.getMicroAppMetaPacket(
+#                    self._microapp.getMetaPacket(packet.param0)))
+#            lambda notificationResult: self._handleResult(notificationResult),
+#            timeout
+#        )
+
+    def validateMicroapp(self, command):
+        self._packet = MicroappValidatePacket(command)
+        self._packet.calculateChecksum()
+        print("Validate microapp")
+        self._writeControlPacket(ControlPacketsGenerator.getMicroAppValidatePacket(self._packet))
 
     def _handleResult(self, notificationResult):
         if notificationResult:
