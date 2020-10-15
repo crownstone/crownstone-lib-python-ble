@@ -21,23 +21,23 @@ class ControlHandler:
         rawNonce = self.core.ble.readCharacteristicWithoutEncryption(CSServices.CrownstoneService, CrownstoneCharacteristics.SessionData)
         ProcessSessionNoncePacket(rawNonce, self.core.settings.basicKey, self.core.settings)
 
-    def setSwitchState(self, switchState):
+    def setSwitch(self, switchVal: int):
         """
-         :param switchState: number [0..1]
+        :param switchVal: 0% .. 100% or special value (SwitchValSpecial).
         """
-        self._writeControlPacket(ControlPacketsGenerator.getSwitchStatePacket(switchState))
+        self._writeControlPacket(ControlPacketsGenerator.getSwitchCommandPacket(switchVal))
 
-    def switchRelay(self, switchState):
+    def setRelay(self, turnOn: bool):
         """
-         :param switchState: number 0 is off, 1 is on.
+        :param turnOn: True to turn relay on.
         """
-        self._writeControlPacket(ControlPacketsGenerator.getRelaySwitchPacket(switchState))
+        self._writeControlPacket(ControlPacketsGenerator.getRelaySwitchPacket(turnOn))
 
-    def switchPWM(self, switchState):
+    def setDimmer(self, intensity: int):
         """
-         :param switchState: number [0..1]
+         :param intensity: percentage [0..100]
         """
-        self._writeControlPacket(ControlPacketsGenerator.getPwmSwitchPacket(switchState))
+        self._writeControlPacket(ControlPacketsGenerator.getDimmerSwitchPacket(intensity))
 
     def commandFactoryReset(self):
         """
@@ -45,15 +45,15 @@ class ControlHandler:
         """
         self._writeControlPacket(ControlPacketsGenerator.getCommandFactoryResetPacket())
 
-    def allowDimming(self, allow):
+    def allowDimming(self, allow: bool):
         """
-        :param allow: bool
+        :param allow: True to allow dimming
         """
         self._writeControlPacket(ControlPacketsGenerator.getAllowDimmingPacket(allow))
 
     def disconnect(self):
         """
-          This forces the Crownstone to disconnect from you
+        Force the Crownstone to disconnect from you.
         """
         try:
             self._writeControlPacket(ControlPacketsGenerator.getDisconnectPacket())

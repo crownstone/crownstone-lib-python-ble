@@ -3,7 +3,7 @@ from time import sleep
 
 from crownstone_core import Conversion
 from crownstone_core.core.modules.EncryptionSettings import UserLevel
-from crownstone_core.protocol.BluenetTypes import BroadcastTypes
+from crownstone_core.protocol.BluenetTypes import BroadcastTypes, SwitchValSpecial
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
 from crownstone_core.util.RC5 import RC5
 
@@ -16,24 +16,25 @@ class BroadcastHandler:
         self.core = bluetoothCore
         self.broadcaster = Broadcaster(hciIndex, self.core.settings)
 
-    def switchCrownstone(self, sphereUID, crownstoneId, switchState):
+    def switchCrownstone(self, sphereUID: int, crownstoneId: int, switchVal: int):
         """
-        switchState is in the range of [0 .. 1]
+        :param sphereUID:      int
+        :param crownstoneId:   int
+        :param switchVal:      percentage [0..100] or special value (SwitchValSpecial).
         """
-        convertedSwitchState = int(min(1, max(0, switchState)) * 100)
-        self._switchCrownstone(sphereUID, crownstoneId, convertedSwitchState)
+        self._switchCrownstone(sphereUID, crownstoneId, switchVal)
 
     def turnOnCrownstone(self, sphereUID, crownstoneId):
-        self._switchCrownstone(sphereUID, crownstoneId, 255)
+        self._switchCrownstone(sphereUID, crownstoneId, SwitchValSpecial.SMART_ON)
 
     def turnOffCrownstone(self, sphereUID, crownstoneId):
         self._switchCrownstone(sphereUID, crownstoneId, 0)
 
-    def _switchCrownstone(self, sphereUID, crownstoneId, switchState):
+    def _switchCrownstone(self, sphereUID, crownstoneId, switchVal):
         """
-        Switchstate here is conforming to the Crownstone protocol, range 0..255
+        :param switchVal:      conforming to the Crownstone protocol, range 0..255
         """
-        stoneSwitchPackets = [[crownstoneId, switchState]]
+        stoneSwitchPackets = [[crownstoneId, switchVal]]
 
         packet = [BroadcastTypes.MULTI_SWITCH.value, len(stoneSwitchPackets)]
         for switchPacket in stoneSwitchPackets:

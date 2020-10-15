@@ -147,19 +147,19 @@ ble = CrownstoneBle()
 
 # set the switch stat eusing the control module
 ble.connect(address) # address is a mac address
-ble.control.setSwitchState(0)
+ble.control.setSwitch(0)
 ble.disconnect()
 ```
 
 
 Methods:
 
-##### `setSwitchState(switchState: float)`
-> You can switch the Crownstone. 0 for off, 1 for on, between 0 and 1 to dim. If you want to dim, make sure dimming is enabled. You can enable this using the allowDimming method.
-##### `switchRelay(switchState)`
-> DEVELOPMENT ONLY: you can switch the relay. 0 for off, 1 for on. Use the setSwitchState instead.
-##### `switchPWM(switchState)`
-> DEVELOPMENT ONLY: you can switch the IGBTs. 0 for off, 1 for on, in between for dimming. Use the setSwitchState instead.
+##### `setSwitch(switchVal: int)`
+> You can switch the Crownstone. 0 for off, 100 for on, between 0 and 100 to dim. There are also special values to be found in SwitchValSpecial. If you want to dim, make sure dimming is enabled. You can enable this using the allowDimming method.
+##### `setRelay(turnOn: bool)`
+> DEVELOPMENT ONLY: you can switch the relay. True for on, False for off. Use the setSwitch instead.
+##### `setDimmer(intensity)`
+> DEVELOPMENT ONLY: you can switch the IGBTs. 0 for off, 100 for on, in between for dimming. Use the setSwitch instead.
 ##### `commandFactoryReset()`
 > Assuming you have the encryption keys, you can use this method to put the Crownstone back into setup mode.
 ##### `allowDimming(allow: bool)`
@@ -191,9 +191,7 @@ ble.disconnect()
 
 
 ##### `getSwitchState()`
-> Get the switch state in the raw form [https://github.com/crownstone/bluenet/blob/master/docs/PROTOCOL.md#switch_state_packet]
-##### `getSwitchStateFloat()`
-> Get the switchState in the range [0 .. 1]
+> Get the switch state as SwitchState class.
 ##### `getTime()`
 > Get the time on the Crownstone as a timestamp since epoch in seconds. This has been corrected for location.
 
