@@ -1,5 +1,7 @@
 import time
+
 from bluepy.btle import BTLEException, BTLEDisconnectError
+from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.protocol.BluenetTypes import ProcessType
 
 from crownstone_ble.Exceptions import BleError
@@ -139,7 +141,7 @@ class ControlHandler:
 
         if firstTime:
             timeout = self._microapp.count * 10
-            print("LOG: Use (for the overall connection) a timeout of", timeout)
+            print(f"LOG: Use (for the overall connection) a timeout of {timeout} for {self._microapp.count} chunks")
 
             self.core.ble.setupNotificationStream(
                 CSServices.CrownstoneService,
@@ -188,7 +190,12 @@ class ControlHandler:
     def _handleResult(self, notificationResult):
         if notificationResult:
             print(notificationResult)
-            err_code = notificationResult[2]
+            resultPacket = ResultPacket(notificationResult)
+            if not resultPacket.valid:
+                print("Invalid result packet")
+                return
+
+            err_code = resultPacket.resultCode
             # Only print atypical error codes
             if err_code != 0x00 and err_code != 0x01:
                 print("Err code" , err_code)
