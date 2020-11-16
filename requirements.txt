@@ -1,7 +1,7 @@
 crownstone-core>=0.5.8
-pyserial==3.4.0
+pyserial>=3.4.0
 bluepy==1.3.0
-pyaes==1.6.1
-requests==2.20.1
-aioblescan==0.2.4
+pyaes>=1.6.1
+requests>=2.20.1
+aioblescan>=0.2.4
 pybluez
