@@ -51,7 +51,7 @@ python3 ./examples/example_continuous_scanning.py
 To use Crownstone BLE, you first import it from crownstone_ble.
 
 ```python
-from crownstone_ble.BLE import CrownstoneBle
+from crownstone_ble import CrownstoneBle
 
 ble = CrownstoneBle(hciIndex=0)
 ```

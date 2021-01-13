@@ -12,13 +12,14 @@ print("This is an example that looks for a close Crownstone, and attempts to rec
 # Fill in the correct hciIndex, see the readme.
 core = CrownstoneBle(hciIndex=0)
 
-print("We're loading some default encryption keys into the library: \"adminKeyForCrown\", \"memberKeyForHome\", \"basicKeyForOther\", \"MyServiceDataKey\", \"aLocalizationKey\", \"MyGoodMeshAppKey\", \"MyGoodMeshNetKey\".\n")
-core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
+keys = ["adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey"]
+print("We're loading some default encryption keys into the library:", ", ".join(keys))
+core.setSettings(*keys)
 
 print("Searching for the nearest Crownstone. This is with a threshold of RSSI: -40, so it will use a close available Crownstones.\n")
 
 # get the nearest crownstone in setup mode. We expect it to be atleast within the -70db range
-nearestStone = core.getNearestCrownstone(rssiAtLeast=-40, returnFirstAcceptable=True)
+nearestStone = core.getNearestCrownstone(rssiAtLeast=-80, returnFirstAcceptable=True)
 
 print("Search Results:", nearestStone)
 

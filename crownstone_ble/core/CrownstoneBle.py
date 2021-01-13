@@ -83,6 +83,9 @@ class CrownstoneBle:
         self.ble.disconnect()
     
     def startScanning(self, scanDuration=3):
+        """
+        TODO: this seems to break for big values of scanDuration (e.g. 60)
+        """
         self.ble.startScanning(scanDuration)
 
     def stopScanning(self):
