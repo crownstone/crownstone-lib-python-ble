@@ -97,6 +97,9 @@ class BleHandler:
 
 
     def startScanning(self, scanDuration=3):
+        """
+        This is a blocking call.
+        """
         if not self.scanningActive:
             self.scanningActive = True
             self.scanAborted = False
