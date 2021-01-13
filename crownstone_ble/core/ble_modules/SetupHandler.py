@@ -20,9 +20,11 @@ class SetupHandler:
         except CrownstoneBleException as e:
             if e.type is not BleError.NOTIFICATION_STREAM_TIMEOUT:
                 raise e
-        isNormalMode = self.core.isCrownstoneInNormalMode(address, 10, waitUntilInRequiredMode=True)
-        if not isNormalMode:
-            raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
+        # TODO: replace this check with an await for async result.
+        # print("Checking if crownstone is in normal mode")
+        # isNormalMode = self.core.isCrownstoneInNormalMode(address, 120, waitUntilInRequiredMode=True)
+        # if not isNormalMode:
+        #     raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
 
 
     def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
