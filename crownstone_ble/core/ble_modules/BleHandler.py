@@ -1,3 +1,5 @@
+import logging
+
 from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_RANDOM, BTLEException, BTLEDisconnectError
 
 
@@ -16,6 +18,8 @@ from crownstone_ble.core.bluetooth_delegates.ScanDelegate import ScanDelegate
 from crownstone_ble.core.bluetooth_delegates.SingleNotificationDelegate import PeripheralDelegate
 from crownstone_ble.core.modules.Validator import Validator
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
+
+_LOGGER = logging.getLogger(__name__)
 
 CCCD_UUID = 0x2902
 
@@ -59,53 +63,57 @@ class BleHandler:
     def connect(self, address, connectionSettings = None):
         if address not in self.connectedPeripherals:
             self.connectedPeripherals[address] = Peripheral(iface=self.hciIndex)
-            print("Connecting...")
+            _LOGGER.info(f"Connecting to {address}")
             self.connectedPeripheral = address
             try:
                 self.connectedPeripherals[address].connect(address, addrType=ADDR_TYPE_RANDOM, iface=self.hciIndex)
             except BTLEDisconnectError:
-                print("Disconnect error")
+                _LOGGER.warning("Disconnect error")
                 return False
             except Exception as err:
-                print("Unknown error")
+                _LOGGER.warning("Unknown error")
                 raise err
                 return False
 
             try:
                 self.connectedPeripherals[address].getServices()
             except Exception as err:
-                print("Unknown error")
+                _LOGGER.warning("Unknown error")
                 raise err
                 return False
 
-            print("Connected")
+            _LOGGER.info("Connected")
             if connectionSettings is not None:
                 if connectionSettings.mtu:
-                    print("Set MTU")
+                    _LOGGER.debug(f"Set MTU to {connectionSettings.mtu}")
                     self.connectedPeripherals[address].setMTU(connectionSettings.mtu)
             return True
-        print("Already connected")
+        _LOGGER.info(f"Already connected to {address}")
         return True
 
     def disconnect(self):
-        print("Disconnecting... Cleaning up")
         if self.connectedPeripheral:
+            _LOGGER.info("Disconnecting...")
             self.connectedPeripherals[self.connectedPeripheral].disconnect()
             del self.connectedPeripherals[self.connectedPeripheral]
             self.connectedPeripheral = None
-            print("Cleaned up")
+        else:
+            _LOGGER.info("Already disconnected")
 
 
     def startScanning(self, scanDuration=3):
         """
         This is a blocking call.
         """
+        _LOGGER.debug(f"startScanning scanDuration={scanDuration}")
         if not self.scanningActive:
             self.scanningActive = True
             self.scanAborted = False
             if self.scanBackend == ScanBackends.Aio:
+                _LOGGER.debug(f"scanner.start Aio")
                 self.scanner.start(scanDuration)
             else:
+                _LOGGER.debug(f"scanner.start")
                 self.scanner.start()
                 scanTime = 0
                 processInterval = 0.5
@@ -114,49 +122,55 @@ class BleHandler:
                     self.scanner.process(processInterval)
 
                 self.stopScanning()
+        # else:
+        #     _LOGGER.warning("Scanner already active")
 
     def startScanningBackground(self, scanDuration=3):
         Timer(0.0001, lambda: self.startScanning(scanDuration))
 
     
     def stopScanning(self):
+        _LOGGER.debug(f"stopScanning")
         if self.scanningActive:
             self.scanner.stop()
             self.scanningActive = False
             
     def abortScanning(self):
+        _LOGGER.debug(f"abortScanning")
         if self.scanningActive:
             self.scanAborted = True
             if self.scanBackend == ScanBackends.Aio:
                 self.scanner.stop()
     
-    def enableNotifications(self):
-        print("ENABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
-    
-    def disableNotifications(self):
-        print("DISABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
+    # def enableNotifications(self):
+    #     print("ENABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
+
+    # def disableNotifications(self):
+    #     print("DISABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
 
     def writeToCharacteristic(self, serviceUUID, characteristicUUID, content):
+        _LOGGER.debug(f"writeToCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
         encryptedContent = EncryptionHandler.encrypt(content, self.settings)
         targetCharacteristic.write(encryptedContent, withResponse=True)
 
     def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
+        _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         byteContent = bytes(content)
         targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
         targetCharacteristic.write(byteContent, withResponse=True)
 
     def readCharacteristic(self, serviceUUID, characteristicUUID):
+        _LOGGER.debug(f"readCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
         data = self.readCharacteristicWithoutEncryption(serviceUUID, characteristicUUID)
         if self.settings.isEncryptionEnabled():
             return EncryptionHandler.decrypt(data, self.settings)
 
-
     def readCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID):
+        _LOGGER.debug(f"readCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
         targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
         data = targetCharacteristic.read()
         return data
-
 
 
     def getCharacteristics(self, serviceUUID):
@@ -196,6 +210,7 @@ class BleHandler:
         
         
     def setupSingleNotification(self, serviceUUID, characteristicUUID, writeCommand):
+        _LOGGER.debug(f"setupSingleNotification serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
         characteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
         peripheral = self.connectedPeripherals[self.connectedPeripheral]
         
@@ -230,6 +245,7 @@ class BleHandler:
         return result
     
     def setupNotificationStream(self, serviceUUID, characteristicUUID, writeCommand, resultHandler, timeout):
+        _LOGGER.debug(f"setupNotificationStream serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} timeout={timeout}")
         characteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
         peripheral = self.connectedPeripherals[self.connectedPeripheral]
         

@@ -1,3 +1,4 @@
+import logging
 import time
 
 from crownstone_ble.Exceptions import BleError
@@ -10,6 +11,7 @@ from crownstone_core.protocol.Services import CSServices
 
 from crownstone_ble.core.ble_modules.ControlHandler import ProcessSessionNoncePacket
 
+_LOGGER = logging.getLogger(__name__)
 
 class SetupHandler:
     def __init__(self, bluetoothCore):
@@ -27,10 +29,11 @@ class SetupHandler:
         # Disconnect before scanning.
         self.core.ble.disconnect()
 
-        # print("Checking if crownstone is in normal mode")
+        _LOGGER.info("Checking if Crownstone is in normal mode..")
         isNormalMode = self.core.isCrownstoneInNormalMode(address, 60, waitUntilInRequiredMode=True)
         if not isNormalMode:
             raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
+        _LOGGER.info("Crownstone has been successfully set up.")
 
 
     def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
@@ -46,7 +49,7 @@ class SetupHandler:
             3
         )
 
-        print("CrownstoneBLE: Closing Setup V2.")
+        _LOGGER.info("Closing Setup V2.")
         self.core.settings.exitSetup()
 
 
@@ -67,23 +70,23 @@ class SetupHandler:
             ibeaconMinor
         )
 
-        print("CrownstoneBLE: Writing setup data to Crownstone...")
+        _LOGGER.info("Writing setup data to Crownstone...")
         self.core.ble.writeToCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl, packet)
 
     def _handleResult(self, result):
         response = ResultPacket(result)
         if response.valid:
             if response.resultCode == ResultValue.WAIT_FOR_SUCCESS:
-                print("CrownstoneBLE: Waiting for setup data to be stored on Crownstone...")
+                _LOGGER.info("Waiting for setup data to be stored on Crownstone...")
                 return ProcessType.CONTINUE
             elif response.resultCode == ResultValue.SUCCESS:
-                print("CrownstoneBLE: Data stored...")
+                _LOGGER.info("Setup data stored...")
                 return ProcessType.FINISHED
             else:
-                print("CrownstoneBLE: Unexpected notification data. Aborting...")
+                _LOGGER.warning("Unexpected notification data. Aborting...")
                 return ProcessType.ABORT_ERROR
         else:
-            print("CrownstoneBLE: Invalid notification data. Aborting...")
+            _LOGGER.warning("Invalid notification data. Aborting...")
             return ProcessType.ABORT_ERROR
 
 

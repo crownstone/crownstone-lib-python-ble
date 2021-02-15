@@ -1,3 +1,5 @@
+import logging
+
 from crownstone_core.Exceptions import CrownstoneError, CrownstoneBleException, CrownstoneException
 from crownstone_core.core.modules.EncryptionSettings import EncryptionSettings
 from crownstone_core.topics.Topics import Topics
@@ -19,6 +21,7 @@ from crownstone_ble.core.modules.RssiChecker import RssiChecker
 from crownstone_ble.core.modules.SetupChecker import SetupChecker
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
+_LOGGER = logging.getLogger(__name__)
 
 class CrownstoneBle:
     
@@ -102,7 +105,7 @@ class CrownstoneBle:
         return gatherer.getCollection()
 
     def isCrownstoneInSetupMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
-        # print("Checking if it is in setup mode, address", address)
+        _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = SetupChecker(address, waitUntilInRequiredMode)
         subscriptionId = BleEventBus.subscribe(Topics.advertisement, checker.handleAdvertisement)
 
@@ -113,7 +116,7 @@ class CrownstoneBle:
         return checker.getResult()
 
     def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
-        # print("Checking if it is in normal mode, address", address)
+        _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = NormalModeChecker(address, waitUntilInRequiredMode)
         subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisement, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
 
