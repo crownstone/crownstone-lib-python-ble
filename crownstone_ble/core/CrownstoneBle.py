@@ -74,11 +74,8 @@ class CrownstoneBle:
 
 
     def setupCrownstone(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
-        self.connect(address)
         self.setup.setup(address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
-        self.disconnect()
-        
-    
+
     def disconnect(self):
         self.ble.disconnect()
     

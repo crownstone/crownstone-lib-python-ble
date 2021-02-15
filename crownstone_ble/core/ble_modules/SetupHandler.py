@@ -1,3 +1,5 @@
+import time
+
 from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneBleException
 from crownstone_core.packets.ResultPacket import ResultPacket
@@ -14,17 +16,21 @@ class SetupHandler:
         self.core = bluetoothCore
 
     def setup(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+        self.core.connect(address)
         characteristics = self.core.ble.getCharacteristics(CSServices.SetupService)
         try:
             self.fastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
         except CrownstoneBleException as e:
             if e.type is not BleError.NOTIFICATION_STREAM_TIMEOUT:
                 raise e
-        # TODO: replace this check with an await for async result.
+
+        # Disconnect before scanning.
+        self.core.ble.disconnect()
+
         # print("Checking if crownstone is in normal mode")
-        # isNormalMode = self.core.isCrownstoneInNormalMode(address, 120, waitUntilInRequiredMode=True)
-        # if not isNormalMode:
-        #     raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
+        isNormalMode = self.core.isCrownstoneInNormalMode(address, 60, waitUntilInRequiredMode=True)
+        if not isNormalMode:
+            raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
 
 
     def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
