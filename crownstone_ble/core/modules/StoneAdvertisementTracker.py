@@ -1,5 +1,8 @@
+import logging
 import time
 import threading
+
+_LOGGER = logging.getLogger(__name__)
 
 AMOUNT_OF_REQUIRED_MATCHES = 2
 
@@ -54,6 +57,7 @@ class StoneAdvertisementTracker:
         now = time.time()
         # check time in self.timeoutTime with current time
         if self.timeoutTime <= now:
+            _LOGGER.debug(f"Timeout {self.address}")
             self.cleanupCallback()
             return
 
@@ -109,8 +113,15 @@ class StoneAdvertisementTracker:
             self.consecutiveMatches = 0
         else:
             if not serviceData.dataReadyForUse:
+                _LOGGER.debug(f"Invalidate {self.address}, dataReadyForUse={serviceData.dataReadyForUse}")
                 self.invalidateDevice(serviceData)
             else:
+                _LOGGER.debug(f"Check {self.address}"
+                              f", id={serviceData.crownstoneId}"
+                              f", uniqueIdentifier={serviceData.uniqueIdentifier}"
+                              f", validation={serviceData.validation}"
+                              f", opCode={serviceData.opCode}"
+                              f", stateOfExternalCrownstone={serviceData.stateOfExternalCrownstone}")
                 if self.uniqueIdentifier != serviceData.uniqueIdentifier:
                     if serviceData.validation != 0 and serviceData.opCode == 5:
                         if serviceData.validation == 0xFA and serviceData.dataType != 1: # datatype 1 is the error packet
@@ -137,6 +148,7 @@ class StoneAdvertisementTracker:
 
     
     def addValidMeasurement(self, serviceData):
+        _LOGGER.debug(f"addValidMeasurement {self.address}")
         if self.consecutiveMatches >= AMOUNT_OF_REQUIRED_MATCHES:
             self.verified = True
             self.consecutiveMatches = 0
