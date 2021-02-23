@@ -9,12 +9,13 @@ from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 """
 Class that validates advertisements from topic 'SystemBleTopics.rawAdvertisement'.
 
-Each MAC address will have its own StoneAdvertisementTracker.
-A separate thread will call tick() at a regular interval.
+Each MAC address will have its own 'StoneAdvertisementTracker'.
+A separate thread will call 'tick()' at a regular interval.
 
-On each 'SystemBleTopics.rawAdvertisement' with a validated address, this class will:
-- emit 'Topics.advertisement'
-- emit 'Topics.newDataAvailable' if the rawAdvertisement has service data
+On each 'SystemBleTopics.rawAdvertisement', this class will:
+- Call 'update()' on the StoneAdvertisementTracker of that MAC address.
+- Emit 'Topics.advertisement', if the address is validated.
+- Emit 'Topics.newDataAvailable' if the address is validated, and the rawAdvertisement has service data.
 
 TODO:
 - Use locks, currently only 'tick()' acquires a lock, so that doesn't prevent concurrency issues.
