@@ -3,6 +3,23 @@ import threading
 
 AMOUNT_OF_REQUIRED_MATCHES = 2
 
+"""
+Class that validates advertisements from a single MAC address.
+
+Each 'update()':
+- Checks if the advertisement can be validated, and sets .verified = True if so.
+- Calculates average RSSI.
+
+Each 'tick()':
+- Removes RSSI measurements that are older than <rssiTimeoutDuration> seconds, and recalculates average RSSI.
+- Calls 'cleanupCallback' if no advertisement has been received for <timeoutDuration> seconds.
+
+TODO:
+- Move checking of opcode and checking of validation value to the service data parser.
+- Use locks, currently only 'handlePayload()' acquires a lock, so that doesn't prevent concurrency issues.
+- Clarify which variables are private, which are public, and which are config.
+- Remove or explain rssiTimeoutList.
+"""
 class StoneAdvertisementTracker:
     
     def __init__(self, cleanupCallback):

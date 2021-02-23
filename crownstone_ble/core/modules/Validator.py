@@ -6,7 +6,21 @@ from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.core.modules.StoneAdvertisementTracker import StoneAdvertisementTracker
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
+"""
+Class that validates advertisements from topic 'SystemBleTopics.rawAdvertisement'.
 
+Each MAC address will have its own StoneAdvertisementTracker.
+A separate thread will call tick() at a regular interval.
+
+On each 'SystemBleTopics.rawAdvertisement' with a validated address, this class will:
+- emit 'Topics.advertisement'
+- emit 'Topics.newDataAvailable' if the rawAdvertisement has service data
+
+TODO:
+- Use locks, currently only 'tick()' acquires a lock, so that doesn't prevent concurrency issues.
+- Rename this class, as it also keeps up the average RSSI.
+- Use advertisements without service data to update the average RSSI.
+"""
 class Validator:
 
     def __init__(self):
