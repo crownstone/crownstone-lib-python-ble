@@ -1,3 +1,4 @@
+from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.packets.Advertisement import Advertisement
 
 from crownstone_ble.AioCrownstoneParser import AioCrownstoneParser
@@ -28,6 +29,5 @@ class AioScanDelegate:
         elif advertisement.serviceData.opCode >= 7:
             advertisement.decrypt(self.settings.serviceDataKey)
 
-        print("parsing a packet", advertisement.isCrownstoneFamily())
         if advertisement.isCrownstoneFamily():
-            BleEventBus.emit(SystemBleTopics.rawAdvertisement, advertisement)
+            BleEventBus.emit(SystemBleTopics.rawAdvertisementClass, advertisement)

@@ -1,8 +1,8 @@
 import logging
 
+from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.Exceptions import CrownstoneError, CrownstoneBleException, CrownstoneException
 from crownstone_core.core.modules.EncryptionSettings import EncryptionSettings
-from crownstone_core.topics.Topics import Topics
 from crownstone_core.util.JsonFileStore import JsonFileStore
 
 from crownstone_ble.Exceptions import BleError
@@ -24,6 +24,7 @@ from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 _LOGGER = logging.getLogger(__name__)
 
 class CrownstoneBle:
+    __version__ = "1.0.0"
     
     def __init__(self, hciIndex = 0, scanBackend = ScanBackends.Bluepy):
         self.settings  = EncryptionSettings()
@@ -39,12 +40,8 @@ class CrownstoneBle:
     
     def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey, referenceId = "PythonLib"):
         self.settings.loadKeys(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey, referenceId)
-        
-        
-    def loadSettingsFromFile(self, path):
-        fileReader = JsonFileStore(path)
-        data = fileReader.getData()
-        
+
+    def loadSettingsFromDictionary(self, data):
         if "admin" not in data:
             raise CrownstoneBleException(CrownstoneError.ADMIN_KEY_REQURED)
         if "member" not in data:
@@ -60,8 +57,15 @@ class CrownstoneBle:
         if "meshNetworkKey" not in data:
             raise CrownstoneBleException(CrownstoneError.MESH_NETWORK_KEY)
 
-        self.setSettings(data["admin"], data["member"], data["basic"], data["serviceDataKey"], data["localizationKey"], data["meshApplicationKey"], data["meshNetworkKey"])
-        
+        self.setSettings(data["admin"], data["member"], data["basic"], data["serviceDataKey"], data["localizationKey"],
+                         data["meshApplicationKey"], data["meshNetworkKey"])
+
+    def loadSettingsFromFile(self, path):
+        fileReader = JsonFileStore(path)
+        data = fileReader.getData()
+
+        self.setSettingsFromDictionary(data)
+
 
     def connect(self, address, ignoreEncryption=False, connectionSettings=None):
         result = self.ble.connect(address, connectionSettings)
@@ -94,8 +98,8 @@ class CrownstoneBle:
     def getCrownstonesByScanning(self, scanDuration=3):
         gatherer = Gatherer()
     
-        subscriptionIdValidated = BleEventBus.subscribe(Topics.advertisement,             lambda advertisementData: gatherer.handleAdvertisement(advertisementData, True)          )
-        subscriptionIdAll       = BleEventBus.subscribe(SystemBleTopics.rawAdvertisement, lambda advertisement: gatherer.handleAdvertisement(advertisement.getDictionary(), False) )
+        subscriptionIdValidated = BleEventBus.subscribe(BleTopics.advertisement,               lambda advertisementData: gatherer.handleAdvertisement(advertisementData, True)          )
+        subscriptionIdAll       = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: gatherer.handleAdvertisement(advertisement.getDictionary(), False) )
     
         self.ble.startScanning(scanDuration=scanDuration)
     
@@ -107,7 +111,7 @@ class CrownstoneBle:
     def isCrownstoneInSetupMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = SetupChecker(address, waitUntilInRequiredMode)
-        subscriptionId = BleEventBus.subscribe(Topics.advertisement, checker.handleAdvertisement)
+        subscriptionId = BleEventBus.subscribe(BleTopics.advertisement, checker.handleAdvertisement)
 
         self.ble.startScanning(scanDuration=scanDuration)
 
@@ -118,7 +122,7 @@ class CrownstoneBle:
     def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = NormalModeChecker(address, waitUntilInRequiredMode)
-        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisement, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
+        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
 
         self.ble.startScanning(scanDuration=scanDuration)
 
@@ -128,7 +132,7 @@ class CrownstoneBle:
 
     def getRssiAverage(self, address, scanDuration=3):
         checker = RssiChecker(address)
-        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisement, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
+        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
 
         self.ble.startScanning(scanDuration=scanDuration)
 
@@ -161,9 +165,9 @@ class CrownstoneBle:
 
         selector = NearestSelector(setup, rssiAtLeast, returnFirstAcceptable, addressesToExcludeSet)
     
-        topic = Topics.advertisement
+        topic = BleTopics.advertisement
         if not validated:
-            topic = SystemBleTopics.rawAdvertisement
+            topic = SystemBleTopics.rawAdvertisementClass
             subscriptionId = BleEventBus.subscribe(topic, lambda advertisement: selector.handleAdvertisement(advertisement.getDictionary()))
         else:
             subscriptionId = BleEventBus.subscribe(topic, lambda advertisementData: selector.handleAdvertisement(advertisementData))

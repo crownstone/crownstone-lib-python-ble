@@ -1,4 +1,5 @@
 from bluepy.btle import DefaultDelegate
+from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.packets.Advertisement import Advertisement
 
 from crownstone_ble.core.BleEventBus import BleEventBus
@@ -29,4 +30,4 @@ class ScanDelegate(DefaultDelegate):
             advertisement.decrypt(self.settings.serviceDataKey)
 
         if advertisement.isCrownstoneFamily():
-            BleEventBus.emit(SystemBleTopics.rawAdvertisement, advertisement)
+            BleEventBus.emit(SystemBleTopics.rawAdvertisementClass, advertisement)

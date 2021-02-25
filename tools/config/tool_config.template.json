@@ -1,0 +1,16 @@
+{
+  "absolutePathToKeyFile": null,
+  "keys": {
+    "admin":              "adminKeyForCrown",
+    "member":             "memberKeyForHome",
+    "basic":              "basicKeyForOther",
+    "serviceDataKey":     "MyServiceDataKey",
+    "localizationKey":    "aLocalizationKey",
+    "meshApplicationKey": "MyGoodMeshAppKey",
+    "meshNetworkKey":     "MyGoodMeshNetKey"
+  },
+  "sphereUID": null,
+  "hciIndex": 0,
+  "scanBackEnd": "Bluepy"
+}
+

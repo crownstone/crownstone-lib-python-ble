@@ -208,7 +208,7 @@ ble.disconnect()
 You can obtain the eventBus directly from the lib:
 
 ```
-from CrownstoneLib import CrownstoneEventBus, Topics
+from crownstone_ble import BleEventBus, BleTopics
 ```
 
 ##### `subscribe(TopicName: enum, functionPointer)`
@@ -227,7 +227,7 @@ def showNewData(data):
 
 
 # Set up event listeners
-CrownstoneEventBus.subscribe(Topics.newDataAvailable, showNewData)
+subscriptionId = CrownstoneEventBus.subscribe(BleTopics.newDataAvailable, showNewData)
 
 # unsubscribe again
 CrownstoneEventBus.unsubscribe(subscriptionId)
@@ -237,7 +237,7 @@ CrownstoneEventBus.unsubscribe(subscriptionId)
 
 These events are available for the BLE part of this lib:
 
-##### `Topics.newDataAvailable`
+##### `BleTopics.newDataAvailable`
 > This is a topic with a summary of the data of an advertisement. If you care about the power usage, you can get it from here.
  For the full advertisement, you can use the Topics.advertisement as shown below.
 > Data format is a dictionary with the fields shown below:
@@ -271,7 +271,10 @@ These events are available for the BLE part of this lib:
 >```
 
 
-##### `Topics.advertisement`
+##### `BleTopics.rawAdvertisement`
+> Data format is the same dictionary as the .advertisement below, except you don't know if the payload is decrypted correctly.
+> Used to determine if the scanning works on your computer.
+##### `BleTopics.advertisement`
 > Data format is a dictionary with the fields shown below:
 >```python
 > {

@@ -1,18 +1,17 @@
 import threading
 
-from crownstone_core.topics.Topics import Topics
-
+from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.core.modules.StoneAdvertisementTracker import StoneAdvertisementTracker
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 """
-Class that validates advertisements from topic 'SystemBleTopics.rawAdvertisement'.
+Class that validates advertisements from topic 'SystemBleTopics.rawAdvertisementClass'.
 
 Each MAC address will have its own 'StoneAdvertisementTracker'.
 A separate thread will call 'tick()' at a regular interval.
 
-On each 'SystemBleTopics.rawAdvertisement', this class will:
+On each 'SystemBleTopics.rawAdvertisementClass', this class will:
 - Call 'update()' on the StoneAdvertisementTracker of that MAC address.
 - Emit 'Topics.advertisement', if the address is validated.
 - Emit 'Topics.newDataAvailable' if the address is validated, and the rawAdvertisement has service data.
@@ -25,7 +24,7 @@ TODO:
 class Validator:
 
     def __init__(self):
-        BleEventBus.subscribe(SystemBleTopics.rawAdvertisement, self.checkAdvertisement)
+        BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, self.checkAdvertisement)
         self.tickTimer = None
         self._lock = threading.Lock()
         self.scheduleTick()
@@ -62,12 +61,15 @@ class Validator:
             self.trackedCrownstones[advertisement.address] = StoneAdvertisementTracker(lambda: self.removeStone(advertisement.address))
         
         self.trackedCrownstones[advertisement.address].update(advertisement)
-        
+
+        # forward all scans over this topic. It is located here instead of the delegates so it would be easier to convert the json to classes.
+        BleEventBus.emit(BleTopics.rawAdvertisement, advertisement.getDictionary())
         if self.trackedCrownstones[advertisement.address].verified:
-            BleEventBus.emit(Topics.advertisement, advertisement.getDictionary())
-            
+            BleEventBus.emit(BleTopics.advertisement, advertisement.getDictionary())
+
             if advertisement.hasScanResponse:
-                BleEventBus.emit(Topics.newDataAvailable, advertisement.getSummary())
+                BleEventBus.emit(BleTopics.newDataAvailable, advertisement.getSummary())
+
 
 
     def shutDown(self):
