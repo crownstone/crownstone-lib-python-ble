@@ -7,7 +7,7 @@ import time
 import json
 
 # Function that's called when new information is received from Crownstones with use the keys you provide in core.setSettings
-from crownstone_ble import CrownstoneBle
+from crownstone_ble import CrownstoneBle, BleEventBus, Topics
 
 
 def showNewData(data):
@@ -25,6 +25,8 @@ keys = ["adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDa
         "MyGoodMeshAppKey", "MyGoodMeshNetKey"]
 print("We're loading some default encryption keys into the library:", ", ".join(keys))
 core.setSettings(*keys)
+
+BleEventBus.subscribe(Topics.newDataAvailable, showNewData);
 
 for i in range(20):
 	# note: cannot use large values for startScanning. See doc.
