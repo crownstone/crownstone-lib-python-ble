@@ -1,4 +1,5 @@
-from bluepy.btle import DefaultDelegate
+from crownstone_core import Conversion
+
 from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.packets.Advertisement import Advertisement
 
@@ -9,20 +10,22 @@ SERVICE_DATA_ADTYPE = 22
 NAME_ADTYPE         = 8
 FLAGS_ADTYPE        = 1
 
-class ScanDelegate(DefaultDelegate):
-    
+class BleakScanDelegate:
+
     def __init__(self, settings):
         self.settings = settings
-        DefaultDelegate.__init__(self)
 
-    def handleDiscovery(self, dev, isNewDev, isNewData):
-        valueText = dev.getValueText(SERVICE_DATA_ADTYPE)
-        nameText = dev.getValueText(NAME_ADTYPE)
-        if valueText is not None:
-            self.parsePayload(dev.addr, dev.rssi, nameText, valueText)
-          
-    def parsePayload(self, address, rssi, nameText, valueText):
-        advertisement = Advertisement(address, rssi, nameText, valueText)
+    def handleDiscovery(self, device, advertisement_data):
+        serviceData = advertisement_data.service_data
+        for serviceUUID, serviceData in serviceData.items():
+            longUUID = serviceUUID.lower()
+            if "0000c001-0000-1000-8000-00805f9b34fb" in longUUID:
+                shortUUID = int(longUUID[4:8], 16)
+                self.parsePayload(device.address, device.rssi, device.name, list(serviceData), shortUUID)
+
+
+    def parsePayload(self, address, rssi, nameText, serviceDataArray, serviceUUID):
+        advertisement = Advertisement(address, rssi, nameText, serviceDataArray, serviceUUID)
 
         if advertisement.serviceData.opCode <= 5:
             advertisement.decrypt(self.settings.basicKey)

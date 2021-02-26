@@ -1,5 +1,4 @@
 import logging
-import time
 
 from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneBleException
@@ -17,31 +16,30 @@ class SetupHandler:
     def __init__(self, bluetoothCore):
         self.core = bluetoothCore
 
-    def setup(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
-        self.core.connect(address)
-        characteristics = self.core.ble.getCharacteristics(CSServices.SetupService)
+    async def setup(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+        await self.core.connect(address)
         try:
-            self.fastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
+            await self.fastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
         except CrownstoneBleException as e:
             if e.type is not BleError.NOTIFICATION_STREAM_TIMEOUT:
                 raise e
 
         # Disconnect before scanning.
-        self.core.ble.disconnect()
+        await self.core.ble.disconnect()
 
         _LOGGER.info("Checking if Crownstone is in normal mode..")
-        isNormalMode = self.core.isCrownstoneInNormalMode(address, 60, waitUntilInRequiredMode=True)
+        isNormalMode = await self.core.isCrownstoneInNormalMode(address, 60, waitUntilInRequiredMode=True)
         if not isNormalMode:
             raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
         _LOGGER.info("Crownstone has been successfully set up.")
 
 
-    def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+    async def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         if not self.core.settings.initializedKeys:
             raise CrownstoneBleException(BleError.NO_ENCRYPTION_KEYS_SET, "Keys are not initialized so I can't put anything on the Crownstone. Make sure you call .setSettings(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey")
 
-        self.handleSetupPhaseEncryption()
-        self.core.ble.setupNotificationStream(
+        await self.handleSetupPhaseEncryption()
+        await self.core.ble.setupNotificationStream(
             CSServices.SetupService,
             SetupCharacteristics.Result,
             lambda: self._writeFastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor),
@@ -50,10 +48,10 @@ class SetupHandler:
         )
 
         _LOGGER.info("Closing Setup V2.")
-        self.core.settings.exitSetup()
+        await self.core.settings.exitSetup()
 
 
-    def _writeFastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+    async def _writeFastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         packet = ControlPacketsGenerator.getSetupPacket(
             crownstoneId,
             sphereId,
@@ -71,7 +69,7 @@ class SetupHandler:
         )
 
         _LOGGER.info("Writing setup data to Crownstone...")
-        self.core.ble.writeToCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl, packet)
+        await self.core.ble.writeToCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl, packet)
 
     def _handleResult(self, result):
         response = ResultPacket(result)
@@ -90,9 +88,9 @@ class SetupHandler:
             return ProcessType.ABORT_ERROR
 
 
-    def handleSetupPhaseEncryption(self):
-        sessionKey   = self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionKey)
-        sessionNoncePacket = self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionData)
+    async def handleSetupPhaseEncryption(self):
+        sessionKey         = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionKey)
+        sessionNoncePacket = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionData)
 
         self.core.settings.loadSetupKey(sessionKey)
         ProcessSessionNoncePacket(sessionNoncePacket, sessionKey, self.core.settings)

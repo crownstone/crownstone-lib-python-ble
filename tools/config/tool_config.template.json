@@ -9,8 +9,6 @@
     "meshApplicationKey": "MyGoodMeshAppKey",
     "meshNetworkKey":     "MyGoodMeshNetKey"
   },
-  "sphereUID": null,
-  "hciIndex": 0,
-  "scanBackEnd": "Bluepy"
+  "hciIndex": 0
 }
 

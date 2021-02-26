@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import asyncio
 import json, sys
 from os import path
 
@@ -20,8 +20,8 @@ except Exception as e:
     quit()
 
 # create the library instance
-print(f'Initializing tool with hciIndex={tool_config["hciIndex"]}, scanBackend={tool_config["scanBackEnd"]}')
-core = CrownstoneBle(hciIndex=tool_config["hciIndex"], scanBackend=tool_config["scanBackEnd"])
+print(f'Initializing tool with hciIndex={tool_config["hciIndex"]}')
+core = CrownstoneBle(hciIndex=tool_config["hciIndex"])
 
 # load the encryption keys into the library
 try:
@@ -47,11 +47,14 @@ if args.verbose:
 else:
     BleEventBus.subscribe(BleTopics.rawAdvertisement, printAdvertisements)
 
+
+async def scan():
+    await core.ble.scan(duration=60)
+
 try:
-    # this will start scanning
-    print("Scanning for any ble devices with service data for 1 minute...")
-    core.startScanning(60)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(scan())
 except KeyboardInterrupt:
-    print("Stopping scanner...")
+    print("Closing the test.")
 
 core.shutDown()

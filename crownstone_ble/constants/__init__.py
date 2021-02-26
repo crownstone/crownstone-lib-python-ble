@@ -1,5 +1,5 @@
-from enum import Enum
+# from enum import Enum
 
-class ScanBackends(Enum):
-    Bluepy = "Bluepy"
-    Aio    = "Aio"
+# class ScanBackends(Enum):
+#     Bluepy = "Bluepy"
+#     Aio    = "Aio"

@@ -20,12 +20,6 @@ Tools are configured via:
                         admin, member, guest, basic,serviceDataKey,
                         localizationKey, meshApplicationKey, and
                         meshNetworkKey
-  --scanBackEnd {Bluepy,Aio}
-                        This is either "Bluepy" or "Aio". This determines
-                        which backend is used for scanning.
-  --sphereUID SPHEREUID
-                        This is the uint8 value sphereId which is used for
-                        broadcast switches. Until then it is not required.
 ```
 
 ## Tool config
@@ -43,9 +37,7 @@ This is the tool config format. It is shown in /config/tool_config.template.json
     "meshApplicationKey": "MyGoodMeshAppKey",
     "meshNetworkKey":     "MyGoodMeshNetKey"
   },
-  "sphereUID": null,
-  "hciIndex": 0,
-  "scanBackEnd": "Bluepy"
+  "hciIndex": 0
 }
 ```
 #### absolutePathToKeyFile
@@ -86,8 +78,6 @@ These arguments are available for all tools. A tool may have different arguments
 | --hciIndex    | The hci-index of the BLE chip |
 | --keyFile     | The json file with key information, expected values: admin, member, guest, basic, serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey |
 | --configFile  | The json all data required to configure the tools. See the template file or the definition above for more information. |
-| --scanBackEnd | This is either "Bluepy" or "Aio". This determines which backend is used for scanning. |
-| --sphereUID   | This is the uint8 value sphereId which is used for broadcast switches. Until then it is not required. |
 
 ## Available tools
 
@@ -110,10 +100,6 @@ This will scan for any Crownstones in your Sphere. This requires the keys you se
 This will scan for any Crownstones in your Sphere. This requires the keys you set to match those on the Crownstones. Additional parameters are:
 #### --targetAddress
 > The MAC address of the Crownstone you want to switch. This is required if you do not switch via broadcast.
-#### --crownstoneId
-> The CrownstoneId [1 .. 255] of the Crownstone you want to switch. This is required if you do not switch via connection.
-#### --broadcast
-> Determine if you want to broadcast the switch command or do it via BLE connection. If this is not set, the switch will be done via connection.
 #### --switchTo
 > ##### MANDATORY
 > The switch state. It is either between 0 and 100, or 255. 0 is off, 1 .. 99 is dimming, 100 is fully on, 255 is on to whatever behaviour thinks it should be.

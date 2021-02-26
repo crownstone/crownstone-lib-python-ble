@@ -1,55 +1,71 @@
+import asyncio
 import logging
 
-from bluepy.btle import Scanner, Peripheral, ADDR_TYPE_RANDOM, BTLEException, BTLEDisconnectError
+from bleak import BleakClient, BleakScanner
 
-
-from threading import Timer
-
-from crownstone_core.util.EncryptionHandler import EncryptionHandler
+# from crownstone_core.util.EncryptionHandler import EncryptionHandler
+# from crownstone_core.Exceptions import CrownstoneBleException
+# from crownstone_core.protocol.BluenetTypes import ProcessType
+#
+# from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneBleException
 from crownstone_core.protocol.BluenetTypes import ProcessType
+from crownstone_core.util.EncryptionHandler import EncryptionHandler
+from crownstone_uart.topics.SystemTopics import SystemTopics
 
 from crownstone_ble.Exceptions import BleError
-from crownstone_ble.constants import ScanBackends
 from crownstone_ble.core.BleEventBus import BleEventBus
-from crownstone_ble.core.bluetooth_delegates.AioScanDelegate import AioScanDelegate
-from crownstone_ble.core.bluetooth_delegates.AioScanner import AioScanner
-from crownstone_ble.core.bluetooth_delegates.ScanDelegate import ScanDelegate
-from crownstone_ble.core.bluetooth_delegates.SingleNotificationDelegate import PeripheralDelegate
+
+from crownstone_ble.core.bluetooth_delegates.BleakScanDelegate import BleakScanDelegate
+from crownstone_ble.core.bluetooth_delegates.NotificationDelegate import NotificationDelegate
 from crownstone_ble.core.modules.Validator import Validator
+# from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 _LOGGER = logging.getLogger(__name__)
 
 CCCD_UUID = 0x2902
 
+
+
+class ActiveClient:
+
+    def __init__(self, address, cleanupCallback):
+        self.address = address
+        self.client = BleakClient(address)
+        self.services = None
+        self.cleanupCallback = cleanupCallback
+
+        self.client.set_disconnected_callback(self.forcedDisconnect)
+
+    def forcedDisconnect(self):
+        BleEventBus.emit(SystemTopics.forcedDisconnect, self.address)
+        self.cleanupCallback()
+
+    async def isConnected(self):
+        return await self.client.is_connected()
+
+
+
 class BleHandler:
-    
-    def __init__(self, settings, hciIndex=0, scanBackend = ScanBackends.Bluepy):
+
+    def __init__(self, settings, hciIndex=0):
+        self.activeClient = None
         self.connectedPeripherals = {}
+        self.settings = settings
 
-        self.settings = None
-
-        self.connectedPeripherals = {}
-        self.connectedPeripheral = None
-
-        self.notificationLoopActive = False
-        self.notificationResult = None
-
+        self.scanner = BleakScanner()
         self.scanningActive = False
         self.scanAborted = False
+        scanDelegate = BleakScanDelegate(self.settings)
+        self.scanner.register_detection_callback(scanDelegate.handleDiscovery)
 
-        self.subscriptionIds = []
-        
-        self.validator = Validator()
-        self.settings = settings
         self.hciIndex = hciIndex
-        self.scanBackend = scanBackend
 
-        if self.scanBackend == ScanBackends.Aio:
-            self.scanner = AioScanner(self.hciIndex).withDelegate(AioScanDelegate(settings))
-        else:
-            self.scanner = Scanner(self.hciIndex).withDelegate(ScanDelegate(settings))
+        self.notificationLoopActive = False
+        self.subscriptionIds = []
+
+        self.validator = Validator()
         self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScanning()))
 
 
@@ -57,238 +73,165 @@ class BleHandler:
         for subscriptionId in self.subscriptionIds:
             BleEventBus.unsubscribe(subscriptionId)
 
-        self.validator.shutDown()
+
+    async def is_connected_guard(self):
+        connected = await self.is_connected()
+        if not connected:
+            _LOGGER.debug(f"Could not perform action since the client is not connected!.")
+            raise CrownstoneBleException("Not connected.")
 
 
-    def connect(self, address, connectionSettings = None):
-        if address not in self.connectedPeripherals:
-            self.connectedPeripherals[address] = Peripheral(iface=self.hciIndex)
-            _LOGGER.info(f"Connecting to {address}")
-            self.connectedPeripheral = address
-            try:
-                self.connectedPeripherals[address].connect(address, addrType=ADDR_TYPE_RANDOM, iface=self.hciIndex)
-            except BTLEDisconnectError:
-                _LOGGER.warning("Disconnect error")
-                return False
-            except Exception as err:
-                _LOGGER.warning("Unknown error")
-                raise err
-                return False
+    async def is_connected(self):
+        if self.activeClient is not None:
+            connected = await self.activeClient.activeClient.is_connected()
+            if connected:
+                return True
+        return False
 
-            try:
-                self.connectedPeripherals[address].getServices()
-            except Exception as err:
-                _LOGGER.warning("Unknown error")
-                raise err
-                return False
 
-            _LOGGER.info("Connected")
-            if connectionSettings is not None:
-                if connectionSettings.mtu:
-                    _LOGGER.debug(f"Set MTU to {connectionSettings.mtu}")
-                    self.connectedPeripherals[address].setMTU(connectionSettings.mtu)
-            return True
-        _LOGGER.info(f"Already connected to {address}")
+    def resetClient(self):
+        self.activeClient = None
+
+
+    async def connect(self, address):
+        self.activeClient = ActiveClient(address, lambda: self.resetClient())
+        _LOGGER.info(f"Connecting to {address}")
+        await self.activeClient.client.connect()
+        _LOGGER.info(f"Connected, get Services")
+        self.activeClient.services = await self.activeClient.client.get_services()
+        _LOGGER.info(f"Services received. Connection ready for use.")
         return True
 
-    def disconnect(self):
-        if self.connectedPeripheral:
-            _LOGGER.info("Disconnecting...")
-            self.connectedPeripherals[self.connectedPeripheral].disconnect()
-            del self.connectedPeripherals[self.connectedPeripheral]
-            self.connectedPeripheral = None
-        else:
-            _LOGGER.info("Already disconnected")
+
+    async def disconnect(self):
+        if self.activeClient is not None:
+            await self.activeClient.disconnect()
+            self.activeClient = None
 
 
-    def startScanning(self, scanDuration=3):
-        """
-        This is a blocking call.
-        """
-        _LOGGER.debug(f"startScanning scanDuration={scanDuration}")
+    async def scan(self, duration=3):
+        await self.startScanning()
+        while duration > 0 and self.scanAborted == False:
+            await asyncio.sleep(0.1)
+            duration -= 0.1
+        await self.stopScanning()
+
+
+    async def startScanning(self):
         if not self.scanningActive:
-            self.scanningActive = True
             self.scanAborted = False
-            if self.scanBackend == ScanBackends.Aio:
-                _LOGGER.debug(f"scanner.start Aio")
-                self.scanner.start(scanDuration)
-            else:
-                _LOGGER.debug(f"scanner.start")
-                self.scanner.start()
-                scanTime = 0
-                processInterval = 0.5
-                while self.scanningActive and scanTime < scanDuration and not self.scanAborted:
-                    scanTime += processInterval
-                    self.scanner.process(processInterval)
+            self.scanningActive = True
+            await self.scanner.start()
 
-                self.stopScanning()
-        # else:
-        #     _LOGGER.warning("Scanner already active")
 
-    def startScanningBackground(self, scanDuration=3):
-        Timer(0.0001, lambda: self.startScanning(scanDuration))
-
-    
-    def stopScanning(self):
-        _LOGGER.debug(f"stopScanning")
+    async def stopScanning(self):
         if self.scanningActive:
-            self.scanner.stop()
             self.scanningActive = False
-            
-    def abortScanning(self):
-        _LOGGER.debug(f"abortScanning")
-        if self.scanningActive:
-            self.scanAborted = True
-            if self.scanBackend == ScanBackends.Aio:
-                self.scanner.stop()
-    
-    # def enableNotifications(self):
-    #     print("ENABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
+            self.scanAborted = False
+            await self.scanner.stop()
 
-    # def disableNotifications(self):
-    #     print("DISABLE NOTIFICATIONS IS NOT IMPLEMENTED YET")
+    def abortScan(self):
+        self.scanAborted == True
 
-    def writeToCharacteristic(self, serviceUUID, characteristicUUID, content):
+
+    async def writeToCharacteristic(self, characteristicUUID, content):
+        await self.writeToCharacteristic(None, characteristicUUID, content)
+
+
+    async def writeToCharacteristic(self, serviceUUID, characteristicUUID, content):
         _LOGGER.debug(f"writeToCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
-        targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
+        await self.is_connected_guard()
         encryptedContent = EncryptionHandler.encrypt(content, self.settings)
-        targetCharacteristic.write(encryptedContent, withResponse=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, encryptedContent, response=True)
 
-    def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
+
+    async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
         _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
+        await self.is_connected_guard()
         byteContent = bytes(content)
-        targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
-        targetCharacteristic.write(byteContent, withResponse=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, byteContent, response=True)
 
-    def readCharacteristic(self, serviceUUID, characteristicUUID):
+
+    async def readCharacteristic(self, serviceUUID, characteristicUUID):
         _LOGGER.debug(f"readCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
-        data = self.readCharacteristicWithoutEncryption(serviceUUID, characteristicUUID)
+        data = await self.readCharacteristicWithoutEncryption(serviceUUID, characteristicUUID)
         if self.settings.isEncryptionEnabled():
             return EncryptionHandler.decrypt(data, self.settings)
 
-    def readCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID):
+
+    async def readCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID):
         _LOGGER.debug(f"readCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
-        targetCharacteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
-        data = targetCharacteristic.read()
-        return data
+        await self.is_connected_guard()
+        return await self.activeClient.client.read_gatt_char(characteristicUUID)
 
 
-    def getCharacteristics(self, serviceUUID):
-        if self.connectedPeripheral:
-            peripheral = self.connectedPeripherals[self.connectedPeripheral]
-
-            try:
-                service = peripheral.getServiceByUUID(serviceUUID)
-            except BTLEException:
-                raise CrownstoneBleException(BleError.CAN_NOT_FIND_SERVICE, "Can not find service: " + serviceUUID)
-
-            characteristics = service.getCharacteristics()
-
-            return characteristics
-
-        else:
-            raise CrownstoneBleException(BleError.CAN_NOT_GET_CHACTERISTIC, "Can't get characteristics: Not connected.")
-
-
-    def getCharacteristic(self, serviceUUID, characteristicUUID):
-        if self.connectedPeripheral:
-            peripheral = self.connectedPeripherals[self.connectedPeripheral]
-        
-            try:
-                service = peripheral.getServiceByUUID(serviceUUID)
-            except BTLEException:
-                raise CrownstoneBleException(BleError.CAN_NOT_FIND_SERVICE, "Can not find service: " + serviceUUID)
-        
-            characteristics = service.getCharacteristics(characteristicUUID)
-            if len(characteristics) == 0:
-                raise CrownstoneBleException(BleError.CAN_NOT_FIND_CHACTERISTIC, "Can not find characteristic: " + characteristicUUID)
-
-            return characteristics[0]
-        
-        else:
-            raise CrownstoneBleException(BleError.CAN_NOT_GET_CHACTERISTIC, "Can't get characteristic: Not connected.")
-        
-        
-    def setupSingleNotification(self, serviceUUID, characteristicUUID, writeCommand):
+    async def setupSingleNotification(self, serviceUUID, characteristicUUID, writeCommand):
         _LOGGER.debug(f"setupSingleNotification serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
-        characteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
-        peripheral = self.connectedPeripherals[self.connectedPeripheral]
-        
-        peripheral.withDelegate(PeripheralDelegate(lambda x: self._killNotificationLoop(x), self.settings))
-        
-        characteristicCCCDList = characteristic.getDescriptors(forUUID=CCCD_UUID)
-        if len(characteristicCCCDList) == 0:
-            raise CrownstoneBleException(BleError.CAN_NOT_FIND_CCCD, "Can not find CCCD handle to use notifications for characteristic: " + characteristicUUID)
-        
-        characteristicCCCD = characteristicCCCDList[0]
-        
-        # enable notifications.. This is ugly but necessary
-        characteristicCCCD.write(b"\x01\x00", True)
-        
-        # execute something that will trigger the notifications
-        writeCommand()
-        
-        self.notificationLoopActive = True
+        await self.is_connected_guard()
 
+        # setup the collecting of the notification data.
+        notificationDelegate = NotificationDelegate(lambda x: self._killNotificationLoop(x), self.settings)
+        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+
+        # execute something that will trigger the notifications
+        await writeCommand()
+
+        # wait for the results to come in.
+        self.notificationLoopActive = True
         loopCount = 0
-        while self.notificationLoopActive and loopCount < 20:
-            peripheral.waitForNotifications(0.5)
+        while self.notificationLoopActive and loopCount < 50:
+            await asyncio.sleep(0.25)
             loopCount += 1
 
 
-        if self.notificationResult is None:
+        if notificationDelegate.result is None:
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
-        
-        result = self.notificationResult
-        self.notificationResult = None
-        
-        return result
-    
-    def setupNotificationStream(self, serviceUUID, characteristicUUID, writeCommand, resultHandler, timeout):
+
+        connected = await self.is_connected()
+        if connected:
+            await self.activeClient.client.stop_notify(characteristicUUID)
+
+        return notificationDelegate.result
+
+
+    async def setupNotificationStream(self, serviceUUID, characteristicUUID, writeCommand, resultHandler, timeout):
         _LOGGER.debug(f"setupNotificationStream serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} timeout={timeout}")
-        characteristic = self.getCharacteristic(serviceUUID, characteristicUUID)
-        peripheral = self.connectedPeripherals[self.connectedPeripheral]
-        
-        peripheral.withDelegate(PeripheralDelegate(lambda x: self._loadNotificationResult(x), self.settings))
-    
-        characteristicCCCDList = characteristic.getDescriptors(forUUID=CCCD_UUID)
-        if len(characteristicCCCDList) == 0:
-            raise CrownstoneBleException(BleError.CAN_NOT_FIND_CCCD, "Can not find CCCD handle to use notifications for characteristic: " + characteristicUUID)
-    
-        characteristicCCCD = characteristicCCCDList[0]
-    
-        # enable notifications.. This is ugly but necessary
-        characteristicCCCD.write(b"\x01\x00", True)
-    
+        await self.is_connected_guard()
+
+        # setup the collecting of the notification data.
+        notificationDelegate = NotificationDelegate(lambda x: self._killNotificationLoop(x), self.settings)
+        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+
         # execute something that will trigger the notifications
-        writeCommand()
-    
+        await writeCommand()
+
+        # wait for the results to come in.
         self.notificationLoopActive = True
-        self.notificationResult = None
-        
         loopCount = 0
         successful = False
-        while self.notificationLoopActive and loopCount < timeout*2:
-            peripheral.waitForNotifications(0.5)
+        while self.notificationLoopActive and loopCount < timeout*4:
+            await asyncio.sleep(0.25)
             loopCount += 1
-            if self.notificationResult is not None:
+            if notificationDelegate.result is not None:
                 command = resultHandler(self.notificationResult)
-                self.notificationResult = None
+                notificationDelegate.result = None
                 if command == ProcessType.ABORT_ERROR:
                     self.notificationLoopActive = False
                     raise CrownstoneBleException(BleError.ABORT_NOTIFICATION_STREAM_W_ERROR, "Aborting the notification stream because the resultHandler raised an error.")
                 elif command == ProcessType.FINISHED:
                     self.notificationLoopActive = False
                     successful = True
-    
+
         if not successful:
             raise CrownstoneBleException(BleError.NOTIFICATION_STREAM_TIMEOUT, "Notification stream not finished within timeout.")
-    
-        
+
+        # remove subscription from this characteristic
+        connected = await self.is_connected()
+        if connected:
+            await self.activeClient.client.stop_notify(characteristicUUID)
+
+
     def _killNotificationLoop(self, result):
         self.notificationLoopActive = False
-        self.notificationResult = result
-        
-    def _loadNotificationResult(self, result):
-        self.notificationResult = result
+
 

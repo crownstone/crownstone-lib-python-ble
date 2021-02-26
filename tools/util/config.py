@@ -11,10 +11,6 @@ def setupDefaultCommandLineArguments(description):
                              'serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey')
     parser.add_argument('--configFile', default=None,
                         help='The json all data required to configure the tools. See the template file or README.md for more information.')
-    parser.add_argument('--scanBackEnd', default=None, choices=["Bluepy", "Aio"],
-                        help='This is either "Bluepy" or "Aio". This determines which backend is used for scanning.')
-    parser.add_argument('--sphereUID', default=None,
-                        help='This is the uint8 value sphereId which is used for broadcast switches. Until then it is not required.')
     return parser
 
 
@@ -76,10 +72,6 @@ def getToolConfig(file_path, parser):
             config["absolutePathToKeyFile"] = args.keyFile
         else:
             raise FileNotFoundError("The provided keyfile in the commandline argument cannot be found. Double check the path. Provided: " + args.keyFile)
-    if args.scanBackEnd is not None:
-        config["scanBackEnd"] = args.scanBackEnd
-    if args.sphereUID is not None:
-        config["sphereUID"] = args.scanBackEnd
 
     return [config, args]
 
