@@ -96,12 +96,16 @@ Currently available tools are:
 This will scan for any ble items available. Additional parameters are:
 #### --verbose      
 > Verbose will show the full advertisement content, not just a single line summary.
+#### --macFilter      
+> Optional mac filter to only show results for this mac address.
   
 ### scan_known_crownstones.py
 This will scan for any Crownstones in your Sphere. This requires the keys you set to match those on the Crownstones. Additional parameters are:
 #### --verbose      
 > Verbose will show the full advertisement content, not just a single line summary.
-  
+#### --macFilter      
+> Optional mac filter to only show results for this mac address.
+
 ### switch_crownstone.py
 This will scan for any Crownstones in your Sphere. This requires the keys you set to match those on the Crownstones. Additional parameters are:
 #### --targetAddress
