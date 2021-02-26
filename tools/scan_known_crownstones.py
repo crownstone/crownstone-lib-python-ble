@@ -18,21 +18,23 @@ loadKeysFromConfig(core, tool_config)
 
 # this prints a small overview of all incoming scans.
 def printAdvertisements(data):
-    print(f'{data["address"]} - {data["name"]} - {data["rssi"]} - {data["serviceUUID"]}')
+    print(f'{data["address"]} {data["name"]} {data["rssi"]} serviceUUID = 0x{data["serviceUUID"]:02x}')
 
 # this CAN be used for more information. This is used when verbose is on.
 def printFullAdvertisements(data):
     print("Scanned device:", json.dumps(data, indent=2))
 
 if args.verbose:
-    BleEventBus.subscribe(BleTopics.advertisement, printAdvertisements)
-else:
     BleEventBus.subscribe(BleTopics.advertisement, printFullAdvertisements)
+else:
+    BleEventBus.subscribe(BleTopics.advertisement, printAdvertisements)
 
-# this will start scanning
-for i in range(20):
-	# note: cannot use large values for startScanning. See doc.
-	print("Scanning for Crownstones in your sphere..")
-	core.startScanning(3)
+try:
+    # this will start scanning
+    print("Scanning for Crownstones in your Sphere with for 1 minute...")
+    print("It may take a few seconds before the results come in since it requires a few advertisements to verify if they belong to your Sphere.")
+    core.startScanning(60)
+except KeyboardInterrupt:
+    print("Stopping scanner...")
 
 core.shutDown()

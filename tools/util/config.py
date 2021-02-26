@@ -9,6 +9,8 @@ def setupDefaultCommandLineArguments(description):
     parser.add_argument('--keyFile', default=None,
                         help='The json file with key information, expected values: admin, member, guest, basic,' +
                              'serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey')
+    parser.add_argument('--config', default=None,
+                        help='The json all data required to configure the tools. See the template file or README.md for more information.')
     parser.add_argument('--scanBackEnd', default=None, choices=["Bluepy", "Aio"],
                         help='This is either "Bluepy" or "Aio". This determines which backend is used for scanning.')
     parser.add_argument('--sphereUID', default=None,
@@ -22,34 +24,53 @@ def loadToolConfig(path_to_config):
     data = fileReader.getData()
     return data
 
-def loadKeysFromConfig(data, ble_lib):
-    if data["absolutePathToKeyFile"] is not None:
-        if path.exists(data["absolutePathToKeyFile"]):
-            ble_lib.loadSettingsFromFile(data["absolutePathToKeyFile"])
+def loadKeysFromConfig(ble_lib, tool_config):
+    if "absolutePathToKeyFile" in tool_config and tool_config["absolutePathToKeyFile"] is not None:
+        if path.exists(tool_config["absolutePathToKeyFile"]):
+            ble_lib.loadSettingsFromFile(tool_config["absolutePathToKeyFile"])
         else:
-            raise FileNotFoundError("the provided absolutePathToKeyFile provided is invalid.")
+            raise FileNotFoundError("the provided path to the keyfile is invalid.")
     else:
-        if data["keys"] is not None:
-            ble_lib.loadSettingsFromDictionary(data)
-        else:
+        if "keys" not in tool_config or tool_config["keys"] is None:
             raise ValueError("The tool_config.json needs keys if the absolutePathToKey is not provided. Check the template.")
+        else:
+            ble_lib.loadSettingsFromDictionary(tool_config["keys"])
 
 def getToolConfig(file_path, parser):
     config = None
-    if path.exists(path.join(file_path, "tool_config.json")):
-        config = loadToolConfig(path.join(file_path, "tool_config.json"))
-    elif path.exists(path.join(file_path, "config", "tool_config.json")):
-        config = loadToolConfig(path.join(file_path, "config", "tool_config.json"))
-    elif path.exists(path.join(file_path, "config", "tool_config.template.json")):
-        config = loadToolConfig(path.join(file_path, "config", "tool_config.template.json"))
-    else:
-        config = {"hciIndex": 0, "scanBackEnd": "Bluepy"}
+    args = parser.parse_args()
+    if args.config is not None:
+        if path.exists(args.config):
+            config = loadToolConfig(path.join(file_path, "tool_config.json"))
+        else:
+            raise FileNotFoundError("The provided keyfile in the commandline argument cannot be found. Double check the path.")
 
+    if config is None:
+        # search for the tool config either in the root dir of the tools, or the config dir of the tools.
+        # if it's not there, load default settings for hciIndex and scanBackend
+        if path.exists(path.join(file_path, "tool_config.json")):
+            config = loadToolConfig(path.join(file_path, "tool_config.json"))
+        elif path.exists(path.join(file_path, "config", "tool_config.json")):
+            config = loadToolConfig(path.join(file_path, "config", "tool_config.json"))
+        else:
+            config = {"hciIndex": 0, "scanBackEnd": "Bluepy"}
+
+        # as a backup, check if there is a key file in the root of the tools or the config dir of the tools.
+        if "absolutePathToKeyFile" not in config and "keys" not in config:
+            if path.exists(path.join(file_path, "keyFile.json")):
+                config["absolutePathToKeyFile"] = path.join(file_path, "keyFile.json")
+            elif path.exists(path.join(file_path, "config", "keyFile.json")):
+                config["absolutePathToKeyFile"] = path.join(file_path, "config", "keyFile.json")
+
+    # finally, commandline args will overwrite anything in the tools.
     args = parser.parse_args()
     if args.hciIndex is not None:
         config["hciIndex"] = args.hciIndex
     if args.keyFile is not None:
-        config["absolutePathToKeyFile"] = args.keyFile
+        if path.exists(args.keyFile):
+            config["absolutePathToKeyFile"] = args.keyFile
+        else:
+            raise FileNotFoundError("The provided keyfile in the commandline argument cannot be found. Double check the path.")
     if args.scanBackEnd is not None:
         config["scanBackEnd"] = args.scanBackEnd
     if args.sphereUID is not None:

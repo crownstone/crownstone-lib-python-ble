@@ -28,11 +28,16 @@ core = CrownstoneBle(hciIndex=tool_config["hciIndex"], scanBackend=tool_config["
 # load the encryption keys into the library
 loadKeysFromConfig(core, tool_config)
 
-if args.broadcast:
-    core.broadcast.switchCrownstone(tool_config["sphereUID"], args.crownstoneId, args.switchTo)
-else:
-    core.connect(args.targetAddress)
-    core.control.setSwitch(args.switchTo)
-    core.disconnect()
+
+try:
+    if args.broadcast:
+        core.broadcast.switchCrownstone(tool_config["sphereUID"], args.crownstoneId, args.switchTo)
+    else:
+        core.connect(args.targetAddress)
+        core.control.setSwitch(args.switchTo)
+        core.disconnect()
+except KeyboardInterrupt:
+    print("Stopping switch action...")
+
 
 core.shutDown()

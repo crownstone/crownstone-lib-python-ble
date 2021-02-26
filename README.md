@@ -124,7 +124,9 @@ These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a 
 >This array can be directly put in the 'addressesToExclude' field of the 'getNearest..' methods.
 
 ##### `startScanning(scanDuration=3)`
-> This will start scanning for Crownstones in a background thread. The scanDuration denotes how long we will scan for. Once scanning is active, Topic.advertisement events will be triggered with the advertisements of the Crownstones that share our encryption keys or are in setup mode.
+> This will start scanning for Crownstones in a background thread. The scanDuration denotes how long we will scan for.
+> Once scanning is active, BleTopics.advertisement events will be triggered with the advertisements of the
+> Crownstones that share our encryption keys or are in setup mode.
 
 ##### `stopScanning()`
 > This will stop an active scan.

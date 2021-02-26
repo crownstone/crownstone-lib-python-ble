@@ -40,7 +40,7 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit experiment / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -134,5 +134,7 @@ dmypy.json
 # PyCharm
 .idea/
 
-tool_config.json
-key_file.json
+tools/config/tool_config.json
+tools/experiment/key_file.json
+
+experiment/

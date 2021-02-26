@@ -64,7 +64,7 @@ class CrownstoneBle:
         fileReader = JsonFileStore(path)
         data = fileReader.getData()
 
-        self.setSettingsFromDictionary(data)
+        self.loadSettingsFromDictionary(data)
 
 
     def connect(self, address, ignoreEncryption=False, connectionSettings=None):
