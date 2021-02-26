@@ -9,7 +9,7 @@ def setupDefaultCommandLineArguments(description):
     parser.add_argument('--keyFile', default=None,
                         help='The json file with key information, expected values: admin, member, guest, basic,' +
                              'serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey')
-    parser.add_argument('--config', default=None,
+    parser.add_argument('--configFile', default=None,
                         help='The json all data required to configure the tools. See the template file or README.md for more information.')
     parser.add_argument('--scanBackEnd', default=None, choices=["Bluepy", "Aio"],
                         help='This is either "Bluepy" or "Aio". This determines which backend is used for scanning.')
@@ -39,11 +39,11 @@ def loadKeysFromConfig(ble_lib, tool_config):
 def getToolConfig(file_path, parser):
     config = None
     args = parser.parse_args()
-    if args.config is not None:
-        if path.exists(args.config):
-            config = loadToolConfig(path.join(file_path, "tool_config.json"))
+    if args.configFile is not None:
+        if path.exists(args.configFile):
+            config = loadToolConfig(args.configFile)
         else:
-            raise FileNotFoundError("The provided keyfile in the commandline argument cannot be found. Double check the path.")
+            raise FileNotFoundError("The provided configFile in the commandline argument cannot be found. Double check the path.")
 
     if config is None:
         # search for the tool config either in the root dir of the tools, or the config dir of the tools.

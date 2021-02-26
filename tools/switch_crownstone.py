@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from os import path
 
 from crownstone_ble import CrownstoneBle

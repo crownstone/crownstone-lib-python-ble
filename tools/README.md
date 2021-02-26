@@ -78,6 +78,17 @@ This is the format of the key_file.json. You can use it via the absolutePathToKe
 }
 ```
 
+## commandLine arguments
+These arguments are available for all tools. A tool may have different arguments as well, those are listed as additional parameters below the tool.
+
+| command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | explanation |
+|--------- | --- |
+| --hciIndex    | The hci-index of the BLE chip |
+| --keyFile     | The json file with key information, expected values: admin, member, guest, basic, serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey |
+| --configFile  | The json all data required to configure the tools. See the template file or the definition above for more information. |
+| --scanBackEnd | This is either "Bluepy" or "Aio". This determines which backend is used for scanning. |
+| --sphereUID   | This is the uint8 value sphereId which is used for broadcast switches. Until then it is not required. |
+
 ## Available tools
 
 Currently available tools are:
