@@ -74,7 +74,10 @@ The Crownstone BLE lib will only interact with Crownstones via Bluetooth connect
 This secure broadcast mechanism currently not implemented in this library. If you want to build an integration, like a hub, which should quickly switch the Crownstones, 
 we'd like to recommend the UART library combined with the Crownstone USB dongle.
 
-This part of the example will connect to an imaginary MAC address, switch it off, wait, back on, disconnect and shutdown.
+This part of the example will connect to an imaginary MAC address, switch it off, wait, back on, disconnect and shutdown. Unfortunately, the macOS version of the library will not be able to use
+MAC addresses. [More information here.](https://github.com/hbldh/bleak/issues/284) 
+
+In order to find which handle corresponds with which Crownstone, you can first scan for Crownstones, find their Crownstone ID and use that to correlate them.
 ```python
 await core.connect('AA:BB:CC:DD:EE:FF')
 await core.control.setSwitch(0)
