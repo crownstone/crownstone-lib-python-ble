@@ -27,12 +27,6 @@ class SetupHandler:
         # Disconnect before scanning.
         await self.core.ble.disconnect()
 
-        _LOGGER.info("Checking if Crownstone is in normal mode..")
-        isNormalMode = await self.core.isCrownstoneInNormalMode(address, 60, waitUntilInRequiredMode=True)
-        if not isNormalMode:
-            raise CrownstoneBleException(BleError.SETUP_FAILED, "The setup has failed.")
-        _LOGGER.info("Crownstone has been successfully set up.")
-
 
     async def fastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         if not self.core.settings.initializedKeys:

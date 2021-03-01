@@ -93,14 +93,13 @@ class BleHandler:
         self.activeClient = None
 
 
-    async def connect(self, address):
+    async def connect(self, address) -> bool:
         self.activeClient = ActiveClient(address, lambda: self.resetClient())
         _LOGGER.info(f"Connecting to {address}")
-        await self.activeClient.client.connect()
-        _LOGGER.info(f"Connected, get Services")
-        self.activeClient.services = await self.activeClient.client.get_services()
-        _LOGGER.info(f"Services received. Connection ready for use.")
-        return True
+        # this can throw an error when the connection fails.
+        # these BleakErrors are nicely human readable.
+        # TODO: document/convert these errors.
+        return await self.activeClient.client.connect()
 
 
     async def disconnect(self):

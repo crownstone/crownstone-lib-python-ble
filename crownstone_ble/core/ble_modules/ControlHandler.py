@@ -59,10 +59,8 @@ class ControlHandler:
         try:
             #print("Send disconnect command")
             await self._writeControlPacket(ControlPacketsGenerator.getDisconnectPacket())
-        except BTLEDisconnectError:
-            print("Disconnect (expected)")
-            pass
         except Exception as err:
+            # TODO: catch this error if it is something like already disconnected
             #print("Unknown error")
             raise err
 
@@ -70,9 +68,6 @@ class ControlHandler:
             # Disconnect from this side as well.
             #print("Disconnect from this side as well")
             self.core.ble.disconnect()
-        except BTLEDisconnectError:
-            print("Disconnect (expected)")
-            pass
         except Exception as err:
             #print("Unknown error")
             raise err
@@ -124,11 +119,10 @@ class ControlHandler:
         :param data: byte array
         """
         self._microapp = MicroappPacketInternal(data)
-        self.sendMicroappInternal(True)
+        self._sendMicroappInternal(True)
 
-    async def sendMicroappInternal(self, firstTime, notificationResult=None):
+    async def _sendMicroappInternal(self, firstTime):
         if not firstTime:
-
             if not self._microapp.nextAvailable():
                 print("LOG: Finish stream")
                 return ProcessType.FINISHED
@@ -157,15 +151,22 @@ class ControlHandler:
             return ProcessType.CONTINUE
 
 
-    async def enableMicroapp(self, packet):
-        self._packet = MicroappEnablePacket(packet)
-        print("Enable microapp")
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppEnablePacket(self._packet))
+    async def enableMicroapp(self, command_packet):
+        """
+         TODO: remove the command_packet interface and just put the required arguments as actual function arguments.
+         TODO: get rid of the wrap, unwrap, wrap, unwrap setup.
+         TODO: create separate enable/disable methods.
+        """
+        packet = MicroappEnablePacket(command_packet)
+        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppEnablePacket(packet))
 
     async def requestMicroapp(self, command):
-        self._packet = MicroappRequestPacket(command)
-        print("Send microapp request")
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppRequestPacket(self._packet))
+        """
+         TODO: remove the command_packet interface and just put the required arguments as actual function arguments.
+         TODO: get rid of the wrap, unwrap, wrap, unwrap setup.
+        """
+        packet = MicroappRequestPacket(command)
+        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppRequestPacket(packet))
 
 #        # Get response
 #        timeout = self._microapp.count * 10
@@ -181,14 +182,12 @@ class ControlHandler:
 #        )
 
     async def validateMicroapp(self, command):
-        self._packet = MicroappValidatePacket(command)
-        self._packet.calculateChecksum()
-        print("Validate microapp")
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppValidatePacket(self._packet))
+        packet = MicroappValidatePacket(command)
+        packet.calculateChecksum()
+        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppValidatePacket(packet))
 
     def _handleResult(self, notificationResult):
         if notificationResult:
-            print(notificationResult)
             resultPacket = ResultPacket(notificationResult)
             if not resultPacket.valid:
                 print("Invalid result packet")
@@ -217,46 +216,6 @@ class ControlHandler:
             if err_code == 0x00:
                 print("LOG: ERR_SUCCESS")
                 return self.sendMicroappInternal(False, notificationResult)
-
-    #  self.bleManager.readCharacteristic(CSServices.CrownstoneService, characteristicId: CrownstoneCharacteristics.FactoryReset)
-    # {(result:[UInt8]) -> Void in
-    # if (result[0] == 1)
-    #     seal.fulfill(())
-    # else if (result[0] == 2) {
-    # seal.reject(CrownstoneError.RECOVER_MODE_DISABLED)
-    # else {
-    # seal.reject(CrownstoneError.NOT_IN_RECOVERY_MODE)
-    # .catch{(err) -> Void in
-    # seal.reject(CrownstoneError.CANNOT_READ_FACTORY_RESET_CHARACTERISTIC)
-
-
-    # return self.bleManager.connect(uuid)}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self._recoverByFactoryReset()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self._checkRecoveryProcess()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self.bleManager.disconnect()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self.bleManager.waitToReconnect()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self.bleManager.connect(uuid)}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self._recoverByFactoryReset()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # return self._checkRecoveryProcess()}
-    # .then
-    # {(_) -> Promise < Void > in
-    # self.bleManager.settings.restoreEncryption()
-    # return self.bleManager.disconnect()
-
 
 
     """

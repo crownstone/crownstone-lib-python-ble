@@ -30,3 +30,4 @@ class Gatherer:
             collectionArray.append(device)
             
         return collectionArray
+

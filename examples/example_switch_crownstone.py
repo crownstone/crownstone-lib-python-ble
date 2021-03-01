@@ -1,42 +1,37 @@
-#!/usr/bin/env python3
-
 """An example that turns on a Crownstone with given MAC address."""
-
-import argparse
+import asyncio
 from crownstone_ble import CrownstoneBle
 
-parser = argparse.ArgumentParser(description='Search for any Crownstone and print their information')
-parser.add_argument('-H', '--hci', dest='hciIndex', type=int, nargs='?', default=0,
-        help='The hci index of the BLE chip.')
-parser.add_argument('-k', '--keyfile', dest='keyFile', type=str, nargs='?', default='example_key_file.txt',
-        help='The json file with keys.')
-parser.add_argument('macAddress', type=str,
-        help='The bluetooth MAC address of Crownstone to switch.')
-parser.add_argument('switchCmd', type=int, default=1,
-        help='Turn on/off [1/0].')
-
-args = parser.parse_args()
-
-print("===========================================\n\nStarting Example\n\n===========================================")
-
 # Initialize the Bluetooth Core.
-core = CrownstoneBle(hciIndex=args.hciIndex)
-core.loadSettingsFromFile(args.keyFile)
+core = CrownstoneBle(hciIndex=0)
 
-print("Connecting to", args.macAddress)
+# We're loading some default encryption keys into the library. These keys can be 16 character ASCII, or 32 character hexstrings.
+core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
-core.connect(args.macAddress)
+async def switch_crownstone():
+    # Connecting to AA:BB:CC:DD:EE:FF
+    await core.connect('AA:BB:CC:DD:EE:FF')
 
-switchVal = 0
-if args.switchCmd > 0:
-        switchVal = 100
-print("Set switch to", switchVal)
-core.control.setSwitch(switchVal)
+    # Switch this Crownstone off
+    await core.control.setSwitch(0)
 
-print("Disconnect")
-core.control.disconnect()
+    # sleep for 1 second before we switch again
+    await asyncio.sleep(1)
 
-core.shutDown()
+    # Switch this Crownstone fully on
+    await core.control.setSwitch(100)
 
-print("===========================================\n\nFinished Example\n\n===========================================")
+    # We're done now, disconnect
+    await core.control.disconnect()
 
+    core.shutDown()
+
+# this is where we actually start running the example
+# Python does not allow us to run async functions like they're normal functions.
+# Since we support Python3.6 as a minimum we can't use asyncio.run (introduced in 3.7)
+try:
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(switch_crownstone())
+except KeyboardInterrupt:
+    # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
+    print("Closing the procedure.")

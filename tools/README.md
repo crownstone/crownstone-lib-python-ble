@@ -98,7 +98,7 @@ This will scan for any Crownstones in your Sphere. This requires the keys you se
 
 ### switch_crownstone.py
 This will scan for any Crownstones in your Sphere. This requires the keys you set to match those on the Crownstones. Additional parameters are:
-#### --targetAddress
+#### --bleAddress
 > The MAC address of the Crownstone you want to switch. This is required if you do not switch via broadcast.
 #### --switchTo
 > ##### MANDATORY

@@ -63,7 +63,7 @@ class CrownstoneBle:
         self.loadSettingsFromDictionary(data)
 
 
-    async def connect(self, address, ignoreEncryption=False, connectionSettings=None):
+    async def connect(self, address, ignoreEncryption=False):
         await self.ble.connect(address)
         if not ignoreEncryption:
             try:
@@ -145,7 +145,7 @@ class CrownstoneBle:
     
     async def getNearestSetupCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]):
         return self._getNearest(True, rssiAtLeast, scanDuration, returnFirstAcceptable, True, addressesToExclude)
-    
+
 
     async def _getNearest(self, setup, rssiAtLeast, scanDuration, returnFirstAcceptable, validated, addressesToExclude):
         addressesToExcludeSet = set()

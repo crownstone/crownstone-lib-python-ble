@@ -22,11 +22,9 @@ class NearestSelector:
         
         if self.setupModeOnly and not advertisement["serviceData"]["setupMode"]:
             return
-        
-        
+
         if not self.setupModeOnly and advertisement["serviceData"]["setupMode"]:
             return
-            
             
         if advertisement["rssi"] < self.rssiAtLeast:
             return
@@ -38,7 +36,6 @@ class NearestSelector:
             
             
     def getNearest(self):
-        
         if len(self.deviceList) == 0:
             return None
         
@@ -48,14 +45,21 @@ class NearestSelector:
             if nearest["rssi"] < adv["rssi"] < 0:
                 nearest = adv
             
-        return {
-            "name": nearest["name"],
-            "address": nearest["address"],
-            "rssi" : nearest["rssi"],
-            "setupMode": nearest["serviceData"]["setupMode"],
-            "id" : nearest["serviceData"]["id"]
-        }
-        
-        
-        
-        
+        return CrownstoneSummary(
+            nearest["name"],
+            nearest["address"],
+            nearest["rssi"],
+            nearest["serviceData"]["setupMode"],
+            nearest["serviceData"]["id"]
+        )
+
+
+class CrownstoneSummary:
+
+    def __init__(self, name, address, rssi, setupMode, crownstoneId, validated):
+        self.name         = name
+        self.address      = address
+        self.rssi         = rssi
+        self.setupMode    = setupMode
+        self.validated    = validated
+        self.crownstoneId = crownstoneId
