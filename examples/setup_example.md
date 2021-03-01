@@ -150,7 +150,7 @@ Since we use Python 3.6, we can't use asyncio.run. This means we first get an ev
 ```python
 try:
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan())
+    loop.run_until_complete(setup_procedure())
 except KeyboardInterrupt:
     # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
     print("Closing the procedure.")
