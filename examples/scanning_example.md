@@ -10,7 +10,7 @@ import asyncio
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 
 # Initialize the Bluetooth Core.
-core = CrownstoneBle(hciIndex=0)
+core = CrownstoneBle()
 
 # We're loading some default encryption keys into the library. These keys can be 16 character ASCII, or 32 character hexstrings.
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
@@ -51,7 +51,7 @@ from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 ### Initialization
 This creates an instance of the library and loads your sphere's keys into it.
 ```python
-core = CrownstoneBle(hciIndex=0)
+core = CrownstoneBle()
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 ```
 
