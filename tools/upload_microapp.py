@@ -136,7 +136,7 @@ async def performMicroAppActions():
 
     print("Disconnect")
     await core.control.disconnect()
-    core.shutDown()
+    await core.shutDown()
 
     print("===========================================\n\nFinished microapp actions\n\n===========================================")
 

@@ -50,6 +50,7 @@ else:
 
 async def scan():
     await core.ble.scan(duration=60)
+    await core.shutDown()
 
 try:
     loop = asyncio.get_event_loop()
@@ -57,4 +58,3 @@ try:
 except KeyboardInterrupt:
     print("Closing the test.")
 
-core.shutDown()

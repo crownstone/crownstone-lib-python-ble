@@ -52,11 +52,10 @@ else:
 async def scan():
     print("Starting scan for Crownstones that belong in your sphere. This can take a few seconds before advertisements come in.")
     await core.ble.scan(duration=60)
+    await core.shutDown()
 
 try:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(scan())
 except KeyboardInterrupt:
     print("Closing the test.")
-
-core.shutDown()

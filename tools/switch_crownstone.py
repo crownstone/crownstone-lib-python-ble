@@ -40,6 +40,7 @@ async def switch():
         print("Disconnected.")
     except KeyboardInterrupt:
         print("Stopping switch action...")
+    await core.shutDown()
 
 
 try:
@@ -47,6 +48,3 @@ try:
     loop.run_until_complete(switch())
 except KeyboardInterrupt:
     print("Closing the test.")
-
-
-core.shutDown()

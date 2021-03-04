@@ -62,9 +62,11 @@ class BleHandler:
         self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScanning()))
 
 
-    def shutDown(self):
+    async def shutDown(self):
         for subscriptionId in self.subscriptionIds:
             BleEventBus.unsubscribe(subscriptionId)
+        await self.disconnect()
+        await self.stopScanning()
 
 
     async def is_connected_guard(self):
