@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 from crownstone_core.packets.ResultPacket import ResultPacket
@@ -86,16 +87,16 @@ class ControlHandler:
 
 
     async def recovery(self, address):
-        self.core.connect(address, ignoreEncryption=True)
-        self._recoveryByFactoryReset()
-        self._checkRecoveryProcess()
-        self.core.disconnect()
-        time.sleep(5)
-        self.core.connect(address, ignoreEncryption=True)
-        self._recoveryByFactoryReset()
-        self._checkRecoveryProcess()
-        self.core.disconnect()
-        time.sleep(2)
+        await self.core.connect(address, ignoreEncryption=True)
+        await self._recoveryByFactoryReset()
+        await self._checkRecoveryProcess()
+        await self.core.disconnect()
+        await asyncio.sleep(5)
+        await self.core.connect(address, ignoreEncryption=True)
+        await self._recoveryByFactoryReset()
+        await self._checkRecoveryProcess()
+        await self.core.disconnect()
+        await asyncio.sleep(2)
 
     async def _recoveryByFactoryReset(self):
         packet = ControlPacketsGenerator.getFactoryResetPacket()
@@ -119,7 +120,7 @@ class ControlHandler:
         :param data: byte array
         """
         self._microapp = MicroappPacketInternal(data)
-        self._sendMicroappInternal(True)
+        await self._sendMicroappInternal(True)
 
     async def _sendMicroappInternal(self, firstTime):
         if not firstTime:
@@ -215,7 +216,7 @@ class ControlHandler:
                 print("LOG: ERR_WAIT_FOR_SUCCESS")
             if err_code == 0x00:
                 print("LOG: ERR_SUCCESS")
-                return self.sendMicroappInternal(False, notificationResult)
+                return self._sendMicroappInternal(False)
 
 
     """

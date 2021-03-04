@@ -1,3 +1,6 @@
+from crownstone_ble.core.container.Containers import ScanData
+from crownstone_core.Enums import CrownstoneOperationMode
+
 from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
@@ -13,23 +16,20 @@ class NearestSelector:
         self.nearest = None
         
         
-    def handleAdvertisement(self, advertisement):
-        if "serviceData" not in advertisement:
+    def handleAdvertisement(self, scanData: ScanData):
+        if scanData.address.lower() in self.addressesToExcludeSet:
             return
         
-        if advertisement["address"].lower() in self.addressesToExcludeSet:
-            return
-        
-        if self.setupModeOnly and not advertisement["serviceData"]["setupMode"]:
+        if self.setupModeOnly and not scanData.operationMode == CrownstoneOperationMode.SETUP:
             return
 
-        if not self.setupModeOnly and advertisement["serviceData"]["setupMode"]:
+        if not self.setupModeOnly and scanData.operationMode == CrownstoneOperationMode.SETUP:
             return
             
-        if advertisement["rssi"] < self.rssiAtLeast:
+        if scanData.rssi < self.rssiAtLeast:
             return
         
-        self.deviceList.append(advertisement)
+        self.deviceList.append(scanData)
         
         if self.returnFirstAcceptable:
             BleEventBus.emit(SystemBleTopics.abortScanning, True)
@@ -42,15 +42,16 @@ class NearestSelector:
         nearest = self.deviceList[0]
         
         for adv in self.deviceList:
-            if nearest["rssi"] < adv["rssi"] < 0:
+            if nearest.rssi < adv.rssi < 0:
                 nearest = adv
             
         return CrownstoneSummary(
-            nearest["name"],
-            nearest["address"],
-            nearest["rssi"],
-            nearest["serviceData"]["setupMode"],
-            nearest["serviceData"]["id"]
+            nearest.name,
+            nearest.address,
+            nearest.rssi,
+            nearest.operationMode == CrownstoneOperationMode.SETUP,
+            nearest.payload.crownstoneId,
+            nearest.validated
         )
 
 

@@ -11,7 +11,6 @@ from bleak import BleakClient, BleakScanner
 from crownstone_core.Exceptions import CrownstoneBleException
 from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
-from crownstone_uart.topics.SystemTopics import SystemTopics
 
 from crownstone_ble.Exceptions import BleError
 from crownstone_ble.core.BleEventBus import BleEventBus
@@ -130,11 +129,7 @@ class BleHandler:
             await self.scanner.stop()
 
     def abortScan(self):
-        self.scanAborted == True
-
-
-    async def writeToCharacteristic(self, characteristicUUID, content):
-        await self.writeToCharacteristic(None, characteristicUUID, content)
+        self.scanAborted = True
 
 
     async def writeToCharacteristic(self, serviceUUID, characteristicUUID, content):

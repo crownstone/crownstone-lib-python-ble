@@ -1,3 +1,6 @@
+from crownstone_core.Enums import CrownstoneOperationMode
+
+from crownstone_ble.core.container.Containers import ScanData
 from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
@@ -5,18 +8,15 @@ from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 class SetupChecker:
 
     def __init__(self, address, waitUntilInRequiredMode=False):
-        self.address = address
+        self.address = address.lower()
         self.result = False
         self.waitUntilInRequiredMode = waitUntilInRequiredMode
 
-    def handleAdvertisement(self, advertisement):
-        if "serviceData" not in advertisement:
+    def handleAdvertisement(self, scanData: ScanData):
+        if scanData.address != self.address:
             return
 
-        if advertisement["address"] != self.address:
-            return
-
-        self.result = advertisement["serviceData"]["setupMode"]
+        self.result = scanData.operationMode == CrownstoneOperationMode.SETUP
 
         if not self.result and self.waitUntilInRequiredMode:
             pass

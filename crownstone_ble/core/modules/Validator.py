@@ -1,3 +1,5 @@
+from crownstone_ble.core.container.Containers import ScanData, fillScanDataFromAdvertisement
+
 from crownstone_ble.topics.BleTopics import BleTopics
 
 from crownstone_ble.core.BleEventBus import BleEventBus
@@ -13,16 +15,8 @@ On each 'SystemBleTopics.rawAdvertisementClass', this class will:
 - Call 'update()' on the StoneAdvertisementTracker of that MAC address.
 - Emit 'BleTopics.advertisement', if the address is validated.
 - Emit 'BleTopics.newDataAvailable' if the address is validated, and the rawAdvertisement has service data.
+- Emit 'BleTopics.rawAdvertisement' for all incoming Crownstone messages.
 
-TODO:
-- Use locks, currently only 'tick()' acquires a lock, so that doesn't prevent concurrency issues. 
-    - Alex: Locks removed for ease of use. This is no longer threaded. Tick removed and renamed to cleanupExpiredTrackers
-- Rename this class, as it also keeps up the average RSSI.
-    - Alex: it doenst though.. the StoneAdvertisementTrackers do that. This one just feeds the StoneAdvertisementTrackers
-            Also, rssi average is completely removed since nothing was using it.
-- Use advertisements without service data to update the average RSSI.
-    - Alex: average RSSI is not used anywhere. removed from class entirely.
-    
 The threading part is removed. This adds a little overhead since the cleanup is called every checkAdvertisement. On the other hand, not threading is usually no issues.
 """
 class Validator:
@@ -55,9 +49,10 @@ class Validator:
         self.trackedCrownstones[advertisement.address].update(advertisement)
 
         # forward all scans over this topic. It is located here instead of the delegates so it would be easier to convert the json to classes.
-        BleEventBus.emit(BleTopics.rawAdvertisement, advertisement.getDictionary())
+        data = fillScanDataFromAdvertisement(advertisement, self.trackedCrownstones[advertisement.address].verified)
+        BleEventBus.emit(BleTopics.rawAdvertisement, data)
         if self.trackedCrownstones[advertisement.address].verified:
-            BleEventBus.emit(BleTopics.advertisement, advertisement.getDictionary())
+            BleEventBus.emit(BleTopics.advertisement, data)
 
-            if advertisement.hasScanResponse:
-                BleEventBus.emit(BleTopics.newDataAvailable, advertisement.getSummary())
+            if not self.trackedCrownstones[advertisement.address].duplicate:
+                BleEventBus.emit(BleTopics.newDataAvailable, data)

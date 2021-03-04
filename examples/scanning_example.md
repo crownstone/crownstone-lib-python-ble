@@ -6,7 +6,6 @@ Here is the full example code, we'll go over the parts below:
 
 ```python
 import asyncio
-import json
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 
@@ -17,8 +16,7 @@ core = CrownstoneBle(hciIndex=0)
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
 def showNewData(data):
-    print("New data received!")
-    print(json.dumps(data, indent=2))
+    print(f"New data received! \n{data}" )
     print("-------------------")
 
 
@@ -43,11 +41,9 @@ except KeyboardInterrupt:
 
 ### Imports
 
-These are the modules that we use in this example. Asyncio provides the API for using async/await methods. Json is used for printing in this case.
-Finally, we import the CrownstoneBle lib, the eventbus and the topics we can subscribe to.
+These are the modules that we use in this example. Asyncio provides the API for using async/await methods. Finally, we import the CrownstoneBle lib, the eventbus and the topics we can subscribe to.
 ```python
 import asyncio
-import json
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 ```
@@ -66,8 +62,7 @@ We create a small function which just prints the data here for example purposes.
 In this case we've subscribed to the `BleTopics.newDataAvailable` topic. You could also subscribe to other events. For this see the documentation.
 ```python
 def showNewData(data):
-    print("New data received!")
-    print(json.dumps(data, indent=2))
+    print(f"New data received! \n{data}" )
     print("-------------------")
 
 

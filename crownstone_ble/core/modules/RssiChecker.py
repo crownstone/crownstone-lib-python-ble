@@ -1,26 +1,26 @@
+from crownstone_ble.core.container.Containers import ScanData
+
 class RssiChecker:
 
     def __init__(self, address):
-        self.address = address
+        self.address = address.lower()
         self.result = []
 
-    def handleAdvertisement(self, advertisement):
-        if "serviceData" not in advertisement:
+
+    def handleAdvertisement(self, scanData: ScanData):
+        if scanData.address != self.address:
             return
 
-        if advertisement["address"] != self.address:
-            return
-
-        self.result.append(advertisement["rssi"])
+        self.result.append(scanData.rssi)
 
 
     def getResult(self):
         if len(self.result) == 0:
             return None
 
-        sum = 0
+        sumResult = 0
         for res in self.result:
-            sum += res
-        return sum/len(self.result)
+            sumResult += res
+        return sumResult / len(self.result)
 
 

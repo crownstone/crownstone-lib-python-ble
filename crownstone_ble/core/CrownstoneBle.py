@@ -92,82 +92,70 @@ class CrownstoneBle:
 
     async def getCrownstonesByScanning(self, scanDuration=3):
         gatherer = Gatherer()
-    
-        subscriptionIdValidated = BleEventBus.subscribe(BleTopics.advertisement,               lambda advertisementData: gatherer.handleAdvertisement(advertisementData, True)          )
-        subscriptionIdAll       = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: gatherer.handleAdvertisement(advertisement.getDictionary(), False) )
-    
-        await self.ble.startScanning(scanDuration=scanDuration)
-    
-        BleEventBus.unsubscribe(subscriptionIdValidated)
+        subscriptionIdAll = BleEventBus.subscribe(BleTopics.rawAdvertisement, lambda scanData: gatherer.handleAdvertisement(scanData))
+        await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionIdAll)
-        
         return gatherer.getCollection()
 
     async def isCrownstoneInSetupMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = SetupChecker(address, waitUntilInRequiredMode)
         subscriptionId = BleEventBus.subscribe(BleTopics.advertisement, checker.handleAdvertisement)
-
-        await self.ble.startScanning(scanDuration=scanDuration)
-
+        await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
-
         return checker.getResult()
 
     async def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = NormalModeChecker(address, waitUntilInRequiredMode)
-        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
-
-        await self.ble.startScanning(scanDuration=scanDuration)
-
+        subscriptionId = BleEventBus.subscribe(BleTopics.rawAdvertisement, lambda scanData: checker.handleAdvertisement(scanData))
+        await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
-
         return checker.getResult()
 
     async def getRssiAverage(self, address, scanDuration=3):
         checker = RssiChecker(address)
-        subscriptionId = BleEventBus.subscribe(SystemBleTopics.rawAdvertisementClass, lambda advertisement: checker.handleAdvertisement(advertisement.getDictionary()))
-
-        await self.ble.startScanning(scanDuration=scanDuration)
-
+        subscriptionId = BleEventBus.subscribe(BleTopics.rawAdvertisement, lambda scanData: checker.handleAdvertisement(scanData))
+        await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
-
         return checker.getResult()
 
-    async def getNearestCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]):
+
+    async def getNearestCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
         return self._getNearest(False, rssiAtLeast, scanDuration, returnFirstAcceptable, False, addressesToExclude)
     
     
-    async def getNearestValidatedCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]):
+    async def getNearestValidatedCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
         return self._getNearest(False, rssiAtLeast, scanDuration, returnFirstAcceptable, True, addressesToExclude)
     
     
-    async def getNearestSetupCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]):
+    async def getNearestSetupCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
         return self._getNearest(True, rssiAtLeast, scanDuration, returnFirstAcceptable, True, addressesToExclude)
 
 
     async def _getNearest(self, setup, rssiAtLeast, scanDuration, returnFirstAcceptable, validated, addressesToExclude):
         addressesToExcludeSet = set()
-        for data in addressesToExclude:
-            if isinstance(data, dict):
-                if "address" in data:
-                    addressesToExcludeSet.add(data["address"].lower())
+        if addressesToExclude is not None:
+            for data in addressesToExclude:
+                if hasattr(data,'address'):
+                    addressesToExcludeSet.add(data.address.lower())
+                elif isinstance(data, dict):
+                    if "address" in data:
+                        addressesToExcludeSet.add(data["address"].lower())
+                    else:
+                        raise CrownstoneException(CrownstoneError.INVALID_ADDRESS, "Addresses to Exclude is either an array of addresses (like 'f7:19:a4:ef:ea:f6') or an array of dicts with the field 'address'")
                 else:
-                    raise CrownstoneException(CrownstoneError.INVALID_ADDRESS, "Addresses to Exclude is either an array of addresses (like 'f7:19:a4:ef:ea:f6') or an array of dicts with the field 'address'")
-            else:
-                addressesToExcludeSet.add(data.lower())
+                    addressesToExcludeSet.add(data.lower())
 
         selector = NearestSelector(setup, rssiAtLeast, returnFirstAcceptable, addressesToExcludeSet)
 
         topic = BleTopics.advertisement
         if not validated:
-            topic = SystemBleTopics.rawAdvertisementClass
-            subscriptionId = BleEventBus.subscribe(topic, lambda advertisement: selector.handleAdvertisement(advertisement.getDictionary()))
-        else:
-            subscriptionId = BleEventBus.subscribe(topic, lambda advertisementData: selector.handleAdvertisement(advertisementData))
-    
-        await self.ble.startScanning(scanDuration=scanDuration)
+            topic = BleTopics.rawAdvertisement
+
+        subscriptionId = BleEventBus.subscribe(topic, lambda scanData: selector.handleAdvertisement(scanData))
+
+        await self.ble.scan(duration=scanDuration)
     
         BleEventBus.unsubscribe(subscriptionId)
         

@@ -34,13 +34,13 @@ except Exception as e:
 
 # this prints a small overview of all incoming scans.
 def printAdvertisements(data):
-    if macFilterPassed(args.macFilter, data["address"]):
-        print(f'{data["address"]} {data["name"]} {data["rssi"]} serviceUUID = 0x{data["serviceUUID"]:02x}')
+    if macFilterPassed(args.macFilter, data.address):
+        print(f'{data.address} {data.name} {data.rssi} serviceUUID = 0x{data.serviceUUID:02x}')
 
 # this CAN be used for more information. This is used when verbose is on.
 def printFullAdvertisements(data):
-    if macFilterPassed(args.macFilter, data["address"]):
-        print("Scanned device:", json.dumps(data, indent=2))
+    if macFilterPassed(args.macFilter, data.address):
+        print("Scanned device:", data)
 
 if args.verbose:
     BleEventBus.subscribe(BleTopics.rawAdvertisement, printFullAdvertisements)
