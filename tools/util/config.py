@@ -4,8 +4,8 @@ import argparse
 
 def setupDefaultCommandLineArguments(description):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--bleAdapterAddress', dest='hciIndex', metavar='I', type=int, nargs='?', default=None,
-                        help='The hci-index of the BLE chip')
+    parser.add_argument('--bleAdapterAddress', dest='bleAdapterAddress', metavar='I', type=int, nargs='?', default=None,
+                        help='bleAdapterAddress of the BLE chip you want to use (linux only). This is usually a mac address.')
     parser.add_argument('--keyFile', default=None,
                         help='The json file with key information, expected values: admin, member, guest, basic,' +
                              'serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey')
@@ -48,13 +48,12 @@ def getToolConfig(file_path, parser):
 
     if config is None:
         # search for the tool config either in the root dir of the tools, or the config dir of the tools.
-        # if it's not there, load default settings for hciIndex and scanBackend
         if path.exists(path.join(file_path, "tool_config.json")):
             config = loadToolConfig(path.join(file_path, "tool_config.json"))
         elif path.exists(path.join(file_path, "config", "tool_config.json")):
             config = loadToolConfig(path.join(file_path, "config", "tool_config.json"))
         else:
-            config = {"hciIndex": 0, "scanBackEnd": "Bluepy"}
+            config = {}
 
         # as a backup, check if there is a key file in the root of the tools or the config dir of the tools.
         if "absolutePathToKeyFile" not in config and "keys" not in config:
