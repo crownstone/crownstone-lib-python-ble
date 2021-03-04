@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import asyncio
-import json, sys
-import logging
 from os import path
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
@@ -22,15 +20,14 @@ except Exception as e:
     quit()
 
 # create the library instance
-print(f'Initializing tool with hciIndex={tool_config["hciIndex"]}')
-core = CrownstoneBle(hciIndex=tool_config["hciIndex"])
+print(f'Initializing tool with bleAdapterAddress={tool_config["bleAdapterAddress"]}')
+core = CrownstoneBle(bleAdapterAddress=tool_config["bleAdapterAddress"])
 
 # load the encryption keys into the library
 try:
     loadKeysFromConfig(core, tool_config)
 except Exception as e:
     print("ERROR", e)
-    core.shutDown()
     quit()
 
 

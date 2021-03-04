@@ -4,7 +4,7 @@ import argparse
 
 def setupDefaultCommandLineArguments(description):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--hciIndex', dest='hciIndex', metavar='I', type=int, nargs='?', default=None,
+    parser.add_argument('--bleAdapterAddress', dest='hciIndex', metavar='I', type=int, nargs='?', default=None,
                         help='The hci-index of the BLE chip')
     parser.add_argument('--keyFile', default=None,
                         help='The json file with key information, expected values: admin, member, guest, basic,' +
@@ -65,8 +65,8 @@ def getToolConfig(file_path, parser):
 
     # finally, commandline args will overwrite anything in the tools.
     args = parser.parse_args()
-    if args.hciIndex is not None:
-        config["hciIndex"] = args.hciIndex
+    if args.bleAdapterAddress is not None:
+        config["bleAdapterAddress"] = args.bleAdapterAddress
     if args.keyFile is not None:
         if path.exists(args.keyFile):
             config["absolutePathToKeyFile"] = args.keyFile
