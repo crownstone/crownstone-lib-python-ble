@@ -15,14 +15,14 @@ class ScanData:
 
     def __str__(self):
         return \
-           f"address:       {self.address      }\n" \
-           f"rssi:          {self.rssi         }\n" \
-           f"name:          {self.name         }\n" \
-           f"operationMode: {self.operationMode}\n" \
-           f"serviceUUID:   {self.serviceUUID  }\n" \
-           f"deviceType:    {self.deviceType   }\n" \
-           f"payload:       {self.payload      }\n" \
-           f"validated:     {self.validated    }\n"
+           f"address:       {self.address              }\n" \
+           f"rssi:          {self.rssi                 }\n" \
+           f"name:          {self.name                 }\n" \
+           f"operationMode: {self.operationMode        }\n" \
+           f"serviceUUID:   {self.serviceUUID          }\n" \
+           f"deviceType:    {self.deviceType.__str__() }\n" \
+           f"payload:       {self.payload              }\n" \
+           f"validated:     {self.validated            }\n"
 
 
 def fillScanDataFromAdvertisement(advertisement: Advertisement, validated: bool):

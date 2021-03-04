@@ -1,8 +1,6 @@
-from crownstone_core import Conversion
-from crownstone_core.Exceptions import CrownstoneException
+from crownstone_core.Enums import CrownstoneOperationMode
 from crownstone_core.protocol.Services import DFU_ADVERTISEMENT_SERVICE_UUID
 
-from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.packets.Advertisement import Advertisement
 
 from crownstone_ble.core.BleEventBus import BleEventBus
@@ -31,13 +29,14 @@ class BleakScanDelegate:
     def parsePayload(self, address, rssi, nameText, serviceDataArray, serviceUUID):
         advertisement = Advertisement(address, rssi, nameText, serviceDataArray, serviceUUID)
         if advertisement.isCrownstoneFamily():
-            if advertisement.serviceData.opCode >= 7:
+            if advertisement.operationMode == CrownstoneOperationMode.SETUP:
+                advertisement.parse()
+                BleEventBus.emit(SystemBleTopics.rawAdvertisementClass, advertisement)
+            else:
                 try:
                     advertisement.parse(self.settings.serviceDataKey)
-                    BleEventBus.emit(SystemBleTopics.rawAdvertisementClass, advertisement)
                 except:
                     # fail silently. If we can't parse this, we just to propagate this message
                     pass
-            elif advertisement.serviceData.opCode == 6:
-                advertisement.parse()
+
                 BleEventBus.emit(SystemBleTopics.rawAdvertisementClass, advertisement)

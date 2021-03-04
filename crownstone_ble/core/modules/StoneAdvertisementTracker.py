@@ -62,7 +62,7 @@ class StoneAdvertisementTracker:
 
         self.timeoutTime = time.time() + self.timeoutDuration
 
-        if not hasattr(advertisement.serviceData.payload, "uniqueIdentifier"):
+        if hasattr(advertisement.serviceData.payload, "uniqueIdentifier"):
             self.uniqueIdentifier = advertisement.serviceData.payload.uniqueIdentifier
 
 

@@ -1,49 +1,32 @@
 # Crownstone BLE
 
-### This only works on linux due to the usage of BlueZ.
-
+We're using Bleak as bluetooth backend, which supports Windows, MacOS and Linux.
 
 Since the Crownstone communicates through BLE, we can use BLE to tell it to do things!
 
-This library works with Python 3.5 and higher. It does not work with Python 3.4...
+This library works with Python 3.6 and higher.
 
 # Requirements
 
-We need libbluetooth-dev for developing with BLE.
-
+On Linux, we need libbluetooth-dev for developing with BLE.
+TODO: Is this still required?
 ```
 sudo apt-get install build-essential libbluetooth-dev libglib2.0-dev python3-setuptools python3-dev
 ```
 
-# Installing Crownstone BLE
+# Installing the library
 
 If you want to use python virtual environments, take a look at the [README_VENV](/README_VENV.MD)
 
-You can use the setup.py to install CrownstoneBLE. If you are on other platforms than Linux, you can use setup.py to install just Crownstone.
+We use `pip3` in the example below because pip is usually the python 2 client. If you're using virtual environments, it could be that pip3 does not exist there. In that case, use pip.
+```
+pip3 install crownstone_ble
+```
+
+You can also build the library from the project itself by:
 
 ```
 sudo python3 setup.py install
-```
-
-Allow non-sudo use of the ble scanner
-
-```
-sudo setcap 'cap_net_raw,cap_net_admin+eip' /usr/local/lib/python3.7/site-packages/bluepy/bluepy-helper
-```
-
-# Running Example
-
-You either have to run example scripts as `sudo`:
-
-```
-sudo python3 ./examples/example_continuous_scanning.py
-```
-
-Or you have to manually give permissions first:
-
-```
-sudo setcap 'cap_net_raw,cap_net_admin+eip' ./examples/example_continuous_scanning.py
-python3 ./examples/example_continuous_scanning.py
 ```
 
 # Documentation
@@ -53,27 +36,29 @@ To use Crownstone BLE, you first import it from crownstone_ble.
 ```python
 from crownstone_ble import CrownstoneBle
 
-ble = CrownstoneBle(hciIndex=0)
+ble = CrownstoneBle(bleAdapterAddress="00:32:FA:DE:15:02")
 ```
 
 CrownstoneBle is composed of a number of top level methods and modules for specific commands. We will first describe these top level methods.
 
 
-##### `__init__(hciIndex=0)`
-> When initializing the CrownstoneBle class, you can provide an hciIndex. On linux, 0 means /dev/hci0, 1 /dev/hci1 etc. Usually 0 is the right one. You can check which one you need with:
+##### `__init__(bleAdapterAddress=None)`
+> When initializing the CrownstoneBle class, you can provide an bleAdapterAddress if you're on linux. You can get these addressed by running:
 > ```
-> hciconfig
+> hcitool dev
 > ```
+> These addresses are in the "00:32:FA:DE:15:02" format.
 > The constructor is not explicitly called with __init__, but like this:
 >```python
->ble = CrownstoneBle(hciIndex=0)
+>ble = CrownstoneBle(bleAdapterAddress="00:32:FA:DE:15:02")
 >```
+>On other platforms you can't currently define which bleAdapter to use.
 
 
-##### `isCrownstoneInSetupMode(address: string, scanDuration=3)`
+##### `async isCrownstoneInSetupMode(address: string, scanDuration=3)`
 > This will scan (blocking) for scanDuration. After which it will return True or False, depending if the Crownstone with this address (like "f7:19:a4:ef:ea:f6") is in setup mode or not.
 
-##### `shutDown()`
+##### `async shutDown()`
 > Shut down the BLE module. This is should be done on closing your script
 
 ##### `setSettings(adminKey: string, memberKey: string, basicKey: string, serviceDataKey: string, localizationKey: string, meshApplicationKey: string, meshNetworkKey: string, referenceId="PythonLib")`
@@ -95,10 +80,10 @@ These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a 
 >}
 >```
 
-##### `connect(address: string)`
+##### `async connect(address: string)`
 > This will connect to the Crownstone with the provided MAC address. You get get this address by scanning or getting the nearest Crownstone. More on this below.
 
-##### `setupCrownstone(address: string, sphereId: int, crownstoneId: int, meshDeviceKey: string, ibeaconUUID: string, ibeaconMajor: uint16, ibeaconMinor: uint16)`
+##### `async setupCrownstone(address: string, sphereId: int, crownstoneId: int, meshDeviceKey: string, ibeaconUUID: string, ibeaconMajor: uint16, ibeaconMinor: uint16)`
 > New Crownstones are in setup mode. In this mode they are open to receiving encryption keys. This method facilitates this process. No manual connection is required.
 > - address is the MAC address.
 > - sphereId is a uint8 id for this Crownstone's sphere (Required for FW 3.0.0+)
@@ -108,10 +93,10 @@ These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a 
 > - ibeaconMajor is a number between 0 and 65535
 > - ibeaconMinor is a number between 0 and 65535
 
-##### `disconnect()`
+##### `async disconnect()`
 > This will disconnect from the connected Crownstone.
 
-##### `getCrownstonesByScanning(scanDuration=3)`
+##### `async getCrownstonesByScanning(scanDuration=3)`
 > This will scan for scanDuration in seconds and return an array of the Crownstone it has found. This is an array of dictionaries that look like this:
 >```
 >{
@@ -123,25 +108,25 @@ These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a 
 >```
 >This array can be directly put in the 'addressesToExclude' field of the 'getNearest..' methods.
 
-##### `startScanning(scanDuration=3)`
+##### `async startScanning(scanDuration=3)`
 > This will start scanning for Crownstones in a background thread. The scanDuration denotes how long we will scan for.
 > Once scanning is active, BleTopics.advertisement events will be triggered with the advertisements of the
 > Crownstones that share our encryption keys or are in setup mode.
 
-##### `stopScanning()`
+##### `async stopScanning()`
 > This will stop an active scan.
 
-##### `getNearestCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+##### `async getNearestCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
 > This will search for the nearest Crownstone. It will return ANY Crownstone, not just the ones sharing our encryption keys.
 > - rssiAtLeast, you can use this to indicate a maximum distance
 > - scanDuration, the amount of time we scan (in seconds)
 > - returnFirstAcceptable, if this is True, we return on the first Crownstone in the rssiAtLeast range. If it is False, we will scan for the timeout duration and return the closest one.
 > - addressesToExclude, this is an array of either address strings (like "f7:19:a4:ef:ea:f6") or an array of dictionaries that each contain an address field (like what you get from "getCrownstonesByScanning").
 
-##### `getNearestValidatedCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+##### `async getNearestValidatedCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
 > Same as getNearestCrownstone but will only search for Crownstones with the same encryption keys.
 
-##### `getNearestSetupCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+##### `async getNearestSetupCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
 > Same as getNearestCrownstone but will only search for Crownstones in setup mode.
 
 
@@ -155,29 +140,29 @@ from crownstone_ble import CrownstoneBle
 ble = CrownstoneBle()
 
 # set the switch stat eusing the control module
-ble.connect(address) # address is a mac address
-ble.control.setSwitch(0)
-ble.disconnect()
+await ble.connect(address) # address is a mac address
+await ble.control.setSwitch(0)
+await ble.disconnect()
 ```
 
 
 Methods:
 
-##### `setSwitch(switchVal: int)`
+##### `async setSwitch(switchVal: int)`
 > You can switch the Crownstone. 0 for off, 100 for on, between 0 and 100 to dim. There are also special values to be found in SwitchValSpecial. If you want to dim, make sure dimming is enabled. You can enable this using the allowDimming method.
-##### `setRelay(turnOn: bool)`
+##### `async setRelay(turnOn: bool)`
 > DEVELOPMENT ONLY: you can switch the relay. True for on, False for off. Use the setSwitch instead.
-##### `setDimmer(intensity)`
+##### `async setDimmer(intensity)`
 > DEVELOPMENT ONLY: you can switch the IGBTs. 0 for off, 100 for on, in between for dimming. Use the setSwitch instead.
-##### `commandFactoryReset()`
+##### `async commandFactoryReset()`
 > Assuming you have the encryption keys, you can use this method to put the Crownstone back into setup mode.
-##### `allowDimming(allow: bool)`
+##### `async allowDimming(allow: bool)`
 > Enable or disable dimming on this Crownstone. Required if you want to dim with setSwitchState.
-##### `disconnect()`
+##### `async disconnect()`
 > Tell the Crownstone to disconnect from you. This can help if your Bluetooth stack does not reliably disconnect.
-##### `lockSwitch(lock: bool)`
+##### `async lockSwitch(lock: bool)`
 > Lock the switch. If locked, it's switchState cannot be changed.
-##### `reset()`
+##### `async reset()`
 > Restart the Crownstone.
 
 
@@ -193,15 +178,15 @@ from crownstone_ble import CrownstoneBle
 ble = CrownstoneBle()
 
 # set the switch state using the control module
-ble.connect(address)
-switchstate = ble.state.getSwitchState()
-ble.disconnect()
+await ble.connect(address)
+await switchstate = ble.state.getSwitchState()
+await ble.disconnect()
 ```
 
 
-##### `getSwitchState()`
+##### `async getSwitchState()`
 > Get the switch state as SwitchState class.
-##### `getTime()`
+##### `async getTime()`
 > Get the time on the Crownstone as a timestamp since epoch in seconds. This has been corrected for location.
 
 
@@ -229,48 +214,17 @@ def showNewData(data):
 
 
 # Set up event listeners
-subscriptionId = CrownstoneEventBus.subscribe(BleTopics.newDataAvailable, showNewData)
+subscriptionId = BleEventBus.subscribe(BleTopics.newDataAvailable, showNewData)
 
 # unsubscribe again
-CrownstoneEventBus.unsubscribe(subscriptionId)
+BleEventBus.unsubscribe(subscriptionId)
 ```
 
 ## Events
-
 These events are available for the BLE part of this lib:
 
 ##### `BleTopics.newDataAvailable`
-> This is a topic with a summary of the data of an advertisement. If you care about the power usage, you can get it from here.
- For the full advertisement, you can use the Topics.advertisement as shown below.
-> Data format is a dictionary with the fields shown below:
->```python
-> {
->     id:                           int    # crownstone id (0-255)
->     setupMode:                    bool   # is in setup mode
->     switchState:                  int
->     temperature:                  int    # chip temp in Celcius
->     powerFactor:                  int    # factor between real and apparent
->     powerUsageReal:               int    # power usage in watts (W)
->     powerUsageApparent:           int    # power usage in VA
->     accumulatedEnergy:            int
->     timestamp:                    int    # time on Crownstone seconds since epoch with locale correction
->     dimmingAvailable:             bool   # dimming is available for use (it is not in the first 60 seconds after boot)
->     dimmingAllowed:               bool   # this Crownstone can dim
->     switchLocked:                 bool   # this Crownstone is switch-locked
->     hasError:                     bool   # this crownstone has an error, if the crownstone has an error, the errors: {} dict is only valid if errorMode: true. This boolean is always valid.
->     errorMode:                    bool   # summary type errorMode : the errors JSON is valid. This alternates with normal advertisements
->     errors: {
->         overCurrent:              bool
->         overCurrentDimmer:        bool
->         temperatureChip:          bool
->         temperatureDimmer:        bool
->         dimmerOnFailure:          bool
->         dimmerOffFailure:         bool
->         bitMask:                  int
->     }
->     timeIsSet:                    bool   # this crownstone knows what time it is
-> }
->```
+> This is a topic to which events are posted which are unique. The same message might be repeated on the advertisement and the rawAdvertisement packets.
 
 
 ##### `BleTopics.rawAdvertisement`

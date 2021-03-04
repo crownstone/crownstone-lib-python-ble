@@ -17,7 +17,6 @@ from crownstone_ble.core.modules.NearestSelector import NearestSelector
 from crownstone_ble.core.modules.NormalModeChecker import NormalModeChecker
 from crownstone_ble.core.modules.RssiChecker import RssiChecker
 from crownstone_ble.core.modules.SetupChecker import SetupChecker
-from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,12 +30,15 @@ class CrownstoneBle:
         self.state     = StateHandler(self)
         self.debug     = DebugHandler(self)
         self.ble       = BleHandler(self.settings, bleAdapterAddress)
+
+        # load default keys so the lib won't crash if you don't use keys.
+        self.settings.loadKeys("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
         
     def shutDown(self):
         self.ble.shutDown()
     
-    def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey, referenceId = "PythonLib"):
-        self.settings.loadKeys(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey, referenceId)
+    def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey):
+        self.settings.loadKeys(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey)
 
     def loadSettingsFromDictionary(self, data):
         if "admin" not in data:
