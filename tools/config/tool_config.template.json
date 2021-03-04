@@ -9,6 +9,6 @@
     "meshApplicationKey": "MyGoodMeshAppKey",
     "meshNetworkKey":     "MyGoodMeshNetKey"
   },
-  "hciIndex": 0
+  "bleAdapterAddress": null
 }
 

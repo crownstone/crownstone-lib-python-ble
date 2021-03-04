@@ -23,9 +23,9 @@ CCCD_UUID = 0x2902
 
 class ActiveClient:
 
-    def __init__(self, address, cleanupCallback):
+    def __init__(self, address, cleanupCallback, bleAdapterAddress):
         self.address = address
-        self.client = BleakClient(address)
+        self.client = BleakClient(address, adapter=bleAdapterAddress)
         self.services = None
         self.cleanupCallback = cleanupCallback
 
@@ -42,24 +42,24 @@ class ActiveClient:
 
 class BleHandler:
 
-    def __init__(self, settings, hciIndex=0):
+    def __init__(self, settings, bleAdapterAddress=None):
         self.activeClient = None
         self.connectedPeripherals = {}
         self.settings = settings
 
-        self.scanner = BleakScanner()
+        self.scanner = BleakScanner(adapter=bleAdapterAddress)
         self.scanningActive = False
         self.scanAborted = False
         scanDelegate = BleakScanDelegate(self.settings)
         self.scanner.register_detection_callback(scanDelegate.handleDiscovery)
 
-        self.hciIndex = hciIndex
+        self.bleAdapterAddress = bleAdapterAddress
 
         self.notificationLoopActive = False
         self.subscriptionIds = []
 
         self.validator = Validator()
-        self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScanning()))
+        self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScan()))
 
 
     async def shutDown(self):
@@ -89,7 +89,7 @@ class BleHandler:
 
 
     async def connect(self, address) -> bool:
-        self.activeClient = ActiveClient(address, lambda: self.resetClient())
+        self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
         _LOGGER.info(f"Connecting to {address}")
         # this can throw an error when the connection fails.
         # these BleakErrors are nicely human readable.

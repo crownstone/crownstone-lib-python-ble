@@ -15,7 +15,7 @@ Tools are configured via:
     - These override the tool_config
 ```
 --help            show this help message and exit
-  --hciIndex [I]        The hci-index of the BLE chip
+  --bleAdapterAddress [I]        bleAdapterAddress of the BLE chip you want to use (linux only). This is usually a mac address.
   --keyFile KEYFILE     The json file with key information, expected values:
                         admin, member, guest, basic,serviceDataKey,
                         localizationKey, meshApplicationKey, and
@@ -37,7 +37,7 @@ This is the tool config format. It is shown in /config/tool_config.template.json
     "meshApplicationKey": "MyGoodMeshAppKey",
     "meshNetworkKey":     "MyGoodMeshNetKey"
   },
-  "hciIndex": 0
+  "bleAdapterAddress": null
 }
 ```
 #### absolutePathToKeyFile
@@ -46,14 +46,8 @@ If this is defined, the keys are ignored. The tool will look for a key_file at t
 #### keys
 These are the keys that belong to your sphere. They are used to decrypt the advertisements and to encrypt the communication during connections.
 
-#### sphereUID
-This is the uint8 value sphereId which is used for broadcast switches. For anything else, this value is not required.
-
-#### hciIndex
-The hci-index of the BLE chip you want the library to use.
-
-#### scanBackEnd
-Determine which scan backend you prefer. It can be either "Bluepy" or "Aio". If you have issues with scans, try the other one.
+#### bleAdapterAddress
+The bleAdapterAddress of the BLE chip you want the library to use.
 
 
 ## Key file
@@ -73,9 +67,9 @@ This is the format of the key_file.json. You can use it via the absolutePathToKe
 ## commandLine arguments
 These arguments are available for all tools. A tool may have different arguments as well, those are listed as additional parameters below the tool.
 
-| command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | explanation |
+| command&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | explanation |
 |--------- | --- |
-| --hciIndex    | The hci-index of the BLE chip |
+| --bleAdapterAddress    | bleAdapterAddress of the BLE chip you want to use (linux only). This is usually a mac address. |
 | --keyFile     | The json file with key information, expected values: admin, member, guest, basic, serviceDataKey, localizationKey, meshApplicationKey, and meshNetworkKey |
 | --configFile  | The json all data required to configure the tools. See the template file or the definition above for more information. |
 

@@ -24,13 +24,13 @@ _LOGGER = logging.getLogger(__name__)
 class CrownstoneBle:
     __version__ = "1.0.0"
     
-    def __init__(self, hciIndex = 0):
+    def __init__(self, bleAdapterAddress = None):
         self.settings  = EncryptionSettings()
         self.control   = ControlHandler(self)
         self.setup     = SetupHandler(self)
         self.state     = StateHandler(self)
         self.debug     = DebugHandler(self)
-        self.ble       = BleHandler(self.settings, hciIndex)
+        self.ble       = BleHandler(self.settings, bleAdapterAddress)
         
     def shutDown(self):
         self.ble.shutDown()
