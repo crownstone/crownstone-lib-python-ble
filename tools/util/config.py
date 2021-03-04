@@ -53,7 +53,7 @@ def getToolConfig(file_path, parser):
         elif path.exists(path.join(file_path, "config", "tool_config.json")):
             config = loadToolConfig(path.join(file_path, "config", "tool_config.json"))
         else:
-            config = {}
+            config = {"bleAdapterAddress": None}
 
         # as a backup, check if there is a key file in the root of the tools or the config dir of the tools.
         if "absolutePathToKeyFile" not in config and "keys" not in config:
