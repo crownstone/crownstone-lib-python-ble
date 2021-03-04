@@ -3,11 +3,6 @@ import logging
 
 from bleak import BleakClient, BleakScanner
 
-# from crownstone_core.util.EncryptionHandler import EncryptionHandler
-# from crownstone_core.Exceptions import CrownstoneBleException
-# from crownstone_core.protocol.BluenetTypes import ProcessType
-#
-# from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneBleException
 from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
@@ -18,7 +13,6 @@ from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.core.bluetooth_delegates.BleakScanDelegate import BleakScanDelegate
 from crownstone_ble.core.bluetooth_delegates.NotificationDelegate import NotificationDelegate
 from crownstone_ble.core.modules.Validator import Validator
-# from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,7 +32,7 @@ class ActiveClient:
         self.client.set_disconnected_callback(self.forcedDisconnect)
 
     def forcedDisconnect(self):
-        BleEventBus.emit(SystemTopics.forcedDisconnect, self.address)
+        BleEventBus.emit(SystemBleTopics.forcedDisconnect, self.address)
         self.cleanupCallback()
 
     async def isConnected(self):
@@ -207,7 +201,7 @@ class BleHandler:
             await asyncio.sleep(0.25)
             loopCount += 1
             if notificationDelegate.result is not None:
-                command = resultHandler(self.notificationResult)
+                command = resultHandler(notificationDelegate.result)
                 notificationDelegate.result = None
                 if command == ProcessType.ABORT_ERROR:
                     self.notificationLoopActive = False
