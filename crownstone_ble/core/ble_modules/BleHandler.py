@@ -28,10 +28,9 @@ class ActiveClient:
         self.client = BleakClient(address, adapter=bleAdapterAddress)
         self.services = None
         self.cleanupCallback = cleanupCallback
-
         self.client.set_disconnected_callback(self.forcedDisconnect)
 
-    def forcedDisconnect(self):
+    def forcedDisconnect(self, data):
         BleEventBus.emit(SystemBleTopics.forcedDisconnect, self.address)
         self.cleanupCallback()
 
@@ -78,7 +77,7 @@ class BleHandler:
 
     async def is_connected(self):
         if self.activeClient is not None:
-            connected = await self.activeClient.activeClient.is_connected()
+            connected = await self.activeClient.client.is_connected()
             if connected:
                 return True
         return False
@@ -94,13 +93,36 @@ class BleHandler:
         # this can throw an error when the connection fails.
         # these BleakErrors are nicely human readable.
         # TODO: document/convert these errors.
-        return await self.activeClient.client.connect()
+        connected = await self.activeClient.client.connect()
+        serviceSet = await self.activeClient.client.get_services()
+        self.activeClient.services = serviceSet.services
+
+        return connected
+        # print(self.activeClient.client.services.characteristics)
 
 
     async def disconnect(self):
         if self.activeClient is not None:
-            await self.activeClient.disconnect()
+            await self.activeClient.client.disconnect()
             self.activeClient = None
+
+
+    async def waitForPeripheralToDisconnect(self, timeout: int = 10):
+        if self.activeClient is not None:
+            if await self.activeClient.isConnected():
+                waiting = True
+                def disconnectListener(data):
+                    nonlocal waiting
+                    waiting = False
+
+                BleEventBus.once(SystemBleTopics.forcedDisconnect, disconnectListener)
+
+                timer = 0
+                while waiting and timer < 10:
+                    await asyncio.sleep(0.1)
+                    timer += 0.1
+
+                self.activeClient = None
 
 
     async def scan(self, duration=3):
@@ -160,7 +182,7 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
-        notificationDelegate = NotificationDelegate(lambda x: self._killNotificationLoop(x), self.settings)
+        notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
         await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
@@ -189,7 +211,7 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
-        notificationDelegate = NotificationDelegate(lambda x: self._killNotificationLoop(x), self.settings)
+        notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
         await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
@@ -221,7 +243,27 @@ class BleHandler:
             await self.activeClient.client.stop_notify(characteristicUUID)
 
 
-    def _killNotificationLoop(self, result):
+    def _killNotificationLoop(self):
         self.notificationLoopActive = False
 
 
+
+    #
+    # def _getCharacteristic(self, serviceUUID, characteristicUUID):
+    #     if self.activeClient is None or self.activeClient.services is None:
+    #         return None
+    #
+    #     service = self._getService(serviceUUID)
+    #     if service is None:
+    #         return None
+    #     print(service)
+    #
+    # def _getService(self, serviceUUID):
+    #     if self.activeClient is None or self.activeClient.services is None:
+    #         return None
+    #
+    #     for a,b in self.activeClient.services.items():
+    #         print("found a", a, "require", serviceUUID)
+    #         if a.lower() == serviceUUID.lower():
+    #             return self.activeClient.services[a]
+    #     return None
