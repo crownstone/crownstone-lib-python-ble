@@ -6,13 +6,6 @@ Since the Crownstone communicates through BLE, we can use BLE to tell it to do t
 
 This library works with Python 3.6 and higher.
 
-# Requirements
-
-On Linux, we need libbluetooth-dev for developing with BLE.
->TODO: Is this still required?
-```
-sudo apt-get install build-essential libbluetooth-dev libglib2.0-dev python3-setuptools python3-dev
-```
 
 # Installing the library
 
@@ -258,7 +251,34 @@ This topic will broadcast all incoming Crownstone scans, including those that do
 This topic will broadcast all incoming Crownstone scans which belong to your sphere (ie. which can be decrypted with your keys).
 
 ### Data format
-All these events contain the same data format. You can find it here.
+All these events contain the same data format:
+```python
+class ScanData:
+
+    def __init__(self):
+        self.address       = None    # this is the handle of the device that broadcast the advertisement. This is usually a MAC address, but on OSX it is a handle.
+        self.rssi          = None    # the signal strength indicator
+        self.name          = None    # name of the device
+        self.operationMode = None    # CrownstoneOperationMode enum (SETUP, NORMAL, DFU, UNKNOWN)
+        self.serviceUUID   = None    # the UUID of the scanned service
+        self.deviceType    = None    # type of Crownstone 
+        self.payload       = None    # See below.
+        self.validated     = None    # Whether your provided keys could decrypt this advertisement
+```
+These fields are always filled. The payload will differ depending on what sort of data is advertised. [You can see all possible types here.](https://github.com/crownstone/crownstone-lib-python-core/tree/master/crownstone_core/packets/serviceDataParsers/containers)
+These payloads all have a `type` field [which is defined here.](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/elements/AdvTypes.py)
+Payloads come in these flavours:
+
+- [CROWNSTONE_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneState.py) 
+- [CROWNSTONE_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvErrorPacket.py) 
+- [EXTERNAL_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalCrownstoneState.py)   
+- [EXTERNAL_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalErrorPacket.py)   
+- [ALTERNATIVE_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvAlternativeState.py)
+- [HUB_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvHubState.py)        
+- [MICROAPP_DATA](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvMicroappData.py)    
+- [SETUP_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneSetupState.py)    
+
+
 
 ## Usage
 You can obtain the eventBus directly from the lib:
@@ -277,34 +297,6 @@ BleEventBus.unsubscribe(subscriptionId)
 ```
 
 
-
-# Troubleshooting
-
-### installation
-old request module (ImportError: cannot import name 'DependencyWarning') --check [https://github.com/nickoala/telepot/issues/80]
-
-cant find bluetooth.h
-```
-sudo apt install libbluetooth-dev
-```
-
-/bluez-5.47/attrib/gatt.c:190: undefined reference to `bswap_128'\n/tmp/ccT6fQZS.o: In function `get_uuid128':\n/home/pi/gits/bluepy/bluepy/./bluez-5.47/attrib/gatt.c:204: undefined reference to `bswap_128'\ncollect2: error: ld returned 1 exit status\nMakefile:28: recipe for target 'bluepy-helper' failed\nmake: *** [bluepy-helper] Error 1\nmake: Leaving directory '/home/pi/gits/bluepy/bluepy'\n"
-You will need to manually install bluez
-```
-sudo apt purge bluez
-wget http://www.kernel.org/pub/linux/bluetooth/bluez-5.47.tar.xz
-tar -xf bluez-5.47.tar.xz
-cd bluez-5.47
-
-sudo apt-get install libical-dev
-./configure --prefix=/usr --mandir=/usr/share/man --sysconfdir=/etc --localstatedir=/var --enable-library --disable-udev
-make
-sudo make install
-```
-
-ZipImportError: bad local file header --update python-setuptools
-
-helper not found --go into the bluepy folder and sudo make -B
 
 ## Bluetooth on Linux
 
