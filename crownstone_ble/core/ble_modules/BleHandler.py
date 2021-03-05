@@ -155,14 +155,13 @@ class BleHandler:
         _LOGGER.debug(f"writeToCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
         encryptedContent = EncryptionHandler.encrypt(content, self.settings)
-        await self.activeClient.client.write_gatt_char(characteristicUUID, encryptedContent, response=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, list(encryptedContent), response=True)
 
 
     async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
         _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
-        byteContent = bytes(content)
-        await self.activeClient.client.write_gatt_char(characteristicUUID, byteContent, response=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, list(content), response=True)
 
 
     async def readCharacteristic(self, serviceUUID, characteristicUUID):
@@ -246,25 +245,3 @@ class BleHandler:
 
     def _killNotificationLoop(self):
         self.notificationLoopActive = False
-
-
-
-    #
-    # def _getCharacteristic(self, serviceUUID, characteristicUUID):
-    #     if self.activeClient is None or self.activeClient.services is None:
-    #         return None
-    #
-    #     service = self._getService(serviceUUID)
-    #     if service is None:
-    #         return None
-    #     print(service)
-    #
-    # def _getService(self, serviceUUID):
-    #     if self.activeClient is None or self.activeClient.services is None:
-    #         return None
-    #
-    #     for a,b in self.activeClient.services.items():
-    #         print("found a", a, "require", serviceUUID)
-    #         if a.lower() == serviceUUID.lower():
-    #             return self.activeClient.services[a]
-    #     return None
