@@ -92,7 +92,7 @@ class BleHandler:
         # this can throw an error when the connection fails.
         # these BleakErrors are nicely human readable.
         # TODO: document/convert these errors.
-        connected = await self.activeClient.client.connect()
+        connected  = await self.activeClient.client.connect()
         serviceSet = await self.activeClient.client.get_services()
         self.activeClient.services = serviceSet.services
 
@@ -114,12 +114,14 @@ class BleHandler:
                     nonlocal waiting
                     waiting = False
 
-                BleEventBus.once(SystemBleTopics.forcedDisconnect, disconnectListener)
+                listenerId = BleEventBus.subscribe(SystemBleTopics.forcedDisconnect, disconnectListener)
 
                 timer = 0
                 while waiting and timer < 10:
                     await asyncio.sleep(0.1)
                     timer += 0.1
+
+                BleEventBus.unsubscribe(listenerId)
 
                 self.activeClient = None
 

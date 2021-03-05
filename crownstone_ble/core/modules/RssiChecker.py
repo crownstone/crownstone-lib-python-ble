@@ -1,4 +1,4 @@
-from crownstone_ble.core.container.Containers import ScanData
+from crownstone_ble.core.container.ScanData import ScanData
 
 class RssiChecker:
 

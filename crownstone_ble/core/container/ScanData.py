@@ -1,6 +1,3 @@
-from crownstone_core.packets.Advertisement import Advertisement
-
-
 class ScanData:
 
     def __init__(self):
@@ -23,18 +20,3 @@ class ScanData:
            f"deviceType:    {self.deviceType.__str__() }\n" \
            f"payload:       {self.payload              }\n" \
            f"validated:     {self.validated            }\n"
-
-
-def fillScanDataFromAdvertisement(advertisement: Advertisement, validated: bool):
-    data = ScanData()
-
-    data.address        = advertisement.address.lower()
-    data.rssi           = advertisement.rssi
-    data.name           = advertisement.name
-    data.operationMode  = advertisement.operationMode
-    data.serviceUUID    = advertisement.serviceUUID
-    data.payload        = advertisement.serviceData.payload
-    data.deviceType     = advertisement.serviceData.deviceType
-    data.validated      = validated
-
-    return data

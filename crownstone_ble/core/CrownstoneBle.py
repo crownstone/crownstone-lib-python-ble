@@ -31,14 +31,17 @@ class CrownstoneBle:
         self.debug     = DebugHandler(self)
         self.ble       = BleHandler(self.settings, bleAdapterAddress)
 
+        self.defaultKeysOverridden = False
+
         # load default keys so the lib won't crash if you don't use keys.
         self.settings.loadKeys("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
-        
+
     async def shutDown(self):
         await self.ble.shutDown()
     
     def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey):
         self.settings.loadKeys(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey)
+        self.defaultKeysOverridden = True
 
     def loadSettingsFromDictionary(self, data):
         if "admin" not in data:
@@ -77,6 +80,10 @@ class CrownstoneBle:
 
 
     async def setupCrownstone(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
+        if not self.defaultKeysOverridden:
+            raise CrownstoneBleException(BleError.NO_ENCRYPTION_KEYS_SET,
+                                         "Keys are not initialized so I can't put anything on the Crownstone. Make sure you call .setSettings, loadSettingsFromFile or loadSettingsFromDictionary")
+
         await self.setup.setup(address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
 
     async def disconnect(self):
