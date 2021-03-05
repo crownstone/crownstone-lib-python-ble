@@ -1,22 +1,16 @@
-
-from crownstone_core.protocol.BluenetTypes import ProcessType
-
-from crownstone_ble.Exceptions import BleError
-from crownstone_core.Exceptions import CrownstoneException, CrownstoneException
-from crownstone_core.packets.SessionDataPacket import SessionDataPacket
+from crownstone_core.Exceptions import CrownstoneError, CrownstoneException
+from crownstone_core.packets.ResultPacket import ResultPacket
+from crownstone_core.packets.debug.AdcChannelSwapsPacket import AdcChannelSwapsPacket
+from crownstone_core.packets.debug.AdcRestartsPacket import AdcRestartsPacket
+from crownstone_core.packets.debug.PowerSamplesPacket import PowerSamplesPacket
+from crownstone_core.packets.debug.SwitchHistoryPacket import SwitchHistoryListPacket
+from crownstone_core.protocol.BluenetTypes import ResultValue
 from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
+from crownstone_core.protocol.ControlPackets import ControlPacket, ControlType
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
-from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
-from crownstone_core.packets.ResultPacket import ResultPacket
-from crownstone_core.Exceptions import CrownstoneError, CrownstoneException
-from crownstone_core.protocol.BluenetTypes import ResultValue
-from crownstone_core.protocol.ControlPackets import ControlPacket, ControlType
 from crownstone_core.util.Conversion import Conversion
-from crownstone_core.packets.debug.PowerSamplesPacket import PowerSamplesPacket
-from crownstone_core.packets.debug.AdcRestartsPacket import AdcRestartsPacket
-from crownstone_core.packets.debug.AdcChannelSwapsPacket import AdcChannelSwapsPacket
-from crownstone_core.packets.debug.SwitchHistoryPacket import SwitchHistoryListPacket, SwitchHistoryItemPacket
+
 
 class DebugHandler:
 	def __init__(self, bluetoothCore):

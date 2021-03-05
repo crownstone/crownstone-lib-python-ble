@@ -7,11 +7,14 @@ from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 class NearestSelector:
     
-    def __init__(self, setupModeOnly=False, rssiAtLeast=-100, returnFirstAcceptable=False, addressesToExcludeSet=set()):
+    def __init__(self, setupModeOnly=False, rssiAtLeast=-100, returnFirstAcceptable=False, addressesToExcludeSet=None):
         self.setupModeOnly = setupModeOnly
         self.rssiAtLeast = rssiAtLeast
         self.returnFirstAcceptable = returnFirstAcceptable
-        self.addressesToExcludeSet = addressesToExcludeSet
+        if addressesToExcludeSet is None:
+            self.addressesToExcludeSet = set()
+        else:
+            self.addressesToExcludeSet = addressesToExcludeSet
         self.deviceList = []
         self.nearest = None
         

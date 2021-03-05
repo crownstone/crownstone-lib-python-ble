@@ -20,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 CCCD_UUID = 0x2902
 
 
-
 class ActiveClient:
 
     def __init__(self, address, cleanupCallback, bleAdapterAddress):

@@ -1,18 +1,17 @@
 import asyncio
-import time
 
-from crownstone_core.packets.ResultPacket import ResultPacket
-from crownstone_core.protocol.BluenetTypes import ProcessType
-
-from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
+from crownstone_core.packets.MicroappPacket import MicroappPacketInternal, MicroappRequestPacket, MicroappValidatePacket, MicroappEnablePacket
+from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
+from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
 from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
 
-from crownstone_core.packets.MicroappPacket import MicroappPacketInternal, MicroappRequestPacket, MicroappValidatePacket, MicroappEnablePacket
+from crownstone_ble.Exceptions import BleError
+
 
 class ControlHandler:
     def __init__(self, bluetoothCore):
@@ -119,6 +118,8 @@ class ControlHandler:
         """
         :param data: byte array
         """
+        # TODO: the control handler should be stateless! You cant use this here! if this is a multi-function thing, make it a separate class
+        #   Maybe put all the microapp stuff under a different handler?
         self._microapp = MicroappPacketInternal(data)
         await self._sendMicroappInternal(True)
 

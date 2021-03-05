@@ -14,8 +14,8 @@ class StateHandler:
         
     async def getSwitchState(self) -> SwitchState:
         # TODO: check result code
-        rawSwitchState = await self._getState(StateType.SWITCH_STATE)[0]
-        return SwitchState(rawSwitchState)
+        rawSwitchState = await self._getState(StateType.SWITCH_STATE)
+        return SwitchState(rawSwitchState[0])
 
     async def getTime(self) -> int:
         """
