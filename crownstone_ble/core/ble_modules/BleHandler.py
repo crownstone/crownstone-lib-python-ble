@@ -155,13 +155,15 @@ class BleHandler:
         _LOGGER.debug(f"writeToCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
         encryptedContent = EncryptionHandler.encrypt(content, self.settings)
-        await self.activeClient.client.write_gatt_char(characteristicUUID, list(encryptedContent), response=True)
+        payload = self._preparePayload(encryptedContent)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
 
 
     async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
         _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
-        await self.activeClient.client.write_gatt_char(characteristicUUID, list(content), response=True)
+        payload = self._preparePayload(content)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
 
 
     async def readCharacteristic(self, serviceUUID, characteristicUUID):
@@ -245,3 +247,7 @@ class BleHandler:
 
     def _killNotificationLoop(self):
         self.notificationLoopActive = False
+
+
+    def _preparePayload(self, data: list or bytes or bytearray):
+        return bytearray(data)

@@ -1,5 +1,4 @@
 from crownstone_ble.core.container.ScanDataUtil import fillScanDataFromAdvertisement
-
 from crownstone_ble.core.BleEventBus import BleEventBus
 from crownstone_ble.core.modules.StoneAdvertisementTracker import StoneAdvertisementTracker
 from crownstone_ble.topics.BleTopics import BleTopics
