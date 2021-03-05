@@ -33,9 +33,6 @@ class StateHandler:
     """
     
     
-    def _writeToState(self):
-        pass
-    
     async def _getState(self, stateType):
         """
         :param stateType: StateType

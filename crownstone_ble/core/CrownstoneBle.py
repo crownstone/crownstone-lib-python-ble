@@ -34,8 +34,8 @@ class CrownstoneBle:
         # load default keys so the lib won't crash if you don't use keys.
         self.settings.loadKeys("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
         
-    def shutDown(self):
-        self.ble.shutDown()
+    async def shutDown(self):
+        await self.ble.shutDown()
     
     def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey):
         self.settings.loadKeys(adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey)
