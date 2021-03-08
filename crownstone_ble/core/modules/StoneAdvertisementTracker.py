@@ -4,7 +4,7 @@ import time
 from crownstone_core.Enums import CrownstoneOperationMode
 from crownstone_core.packets.Advertisement import Advertisement
 from crownstone_core.packets.ServiceData import ServiceData
-from crownstone_core.packets.serviceDataParsers.containers.AdvTypes import AdvType
+from crownstone_core.packets.serviceDataParsers.containers.elements.AdvTypes import AdvType
 
 _LOGGER = logging.getLogger(__name__)
 
