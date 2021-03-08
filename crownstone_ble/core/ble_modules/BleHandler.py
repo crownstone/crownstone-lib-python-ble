@@ -4,6 +4,7 @@ import logging
 from bleak import BleakClient, BleakScanner
 
 from crownstone_core.Exceptions import CrownstoneBleException
+from crownstone_core.core.modules.EncryptionSettings import EncryptionSettings
 from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
 
