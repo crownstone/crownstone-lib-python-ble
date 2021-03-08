@@ -93,14 +93,11 @@ class CrownstoneBle:
         await self.ble.disconnect()
     
     async def startScanning(self, scanDuration=3):
-        """
-        TODO: this seems to break for big values of scanDuration (e.g. 60)
-            - Alex: not proven, works fine here. Double check.
-        """
         await self.ble.scan(scanDuration)
 
     async def stopScanning(self):
         await self.ble.stopScanning()
+
 
     async def getCrownstonesByScanning(self, scanDuration=3):
         gatherer = Gatherer()
@@ -108,6 +105,7 @@ class CrownstoneBle:
         await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionIdAll)
         return gatherer.getCollection()
+
 
     async def isCrownstoneInSetupMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
@@ -117,6 +115,7 @@ class CrownstoneBle:
         BleEventBus.unsubscribe(subscriptionId)
         return checker.getResult()
 
+
     async def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
         _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
         checker = NormalModeChecker(address, waitUntilInRequiredMode)
@@ -124,6 +123,7 @@ class CrownstoneBle:
         await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
         return checker.getResult()
+
 
     async def getRssiAverage(self, address, scanDuration=3):
         checker = RssiChecker(address)

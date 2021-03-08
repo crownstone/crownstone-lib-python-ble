@@ -75,7 +75,7 @@ These arguments are available for all tools. A tool may have different arguments
 
 ## Available tools
 
-Currently available tools are:
+Currently, available tools are:
 ### scan_any_crownstones.py
 This will scan for any ble items available. Additional parameters are:
 #### --verbose      

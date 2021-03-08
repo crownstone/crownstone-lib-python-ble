@@ -17,7 +17,7 @@ class SetupHandler:
         self.core = bluetoothCore
 
     async def setup(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
-        await self.core.connect(address, ignoreEncryption=True)
+        await self.core.ble.connect(address)
         try:
             await self.fastSetupV2(sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
         except CrownstoneBleException as e:
