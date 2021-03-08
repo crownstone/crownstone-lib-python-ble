@@ -1,5 +1,7 @@
 import logging
 
+from crownstone_ble.core.container.ScanData import ScanData
+
 from crownstone_ble.core.ble_modules.BleHandler import BleHandler
 from crownstone_ble.topics.BleTopics import BleTopics
 from crownstone_core.Exceptions import CrownstoneError, CrownstoneBleException, CrownstoneException
@@ -131,19 +133,19 @@ class CrownstoneBle:
         return checker.getResult()
 
 
-    async def getNearestCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
+    async def getNearestCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None) -> ScanData or None:
         return self._getNearest(False, rssiAtLeast, scanDuration, returnFirstAcceptable, False, addressesToExclude)
     
     
-    async def getNearestValidatedCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
+    async def getNearestValidatedCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None) -> ScanData or None:
         return self._getNearest(False, rssiAtLeast, scanDuration, returnFirstAcceptable, True, addressesToExclude)
     
     
-    async def getNearestSetupCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None):
+    async def getNearestSetupCrownstone(self, rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=None) -> ScanData or None:
         return self._getNearest(True, rssiAtLeast, scanDuration, returnFirstAcceptable, True, addressesToExclude)
 
 
-    async def _getNearest(self, setup, rssiAtLeast, scanDuration, returnFirstAcceptable, validated, addressesToExclude):
+    async def _getNearest(self, setup, rssiAtLeast, scanDuration, returnFirstAcceptable, validated, addressesToExclude) -> ScanData or None:
         addressesToExcludeSet = set()
         if addressesToExclude is not None:
             for data in addressesToExclude:

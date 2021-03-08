@@ -97,3 +97,7 @@ This will scan for any Crownstones in your Sphere. This requires the keys you se
 #### --switchTo
 > ##### MANDATORY
 > The switch state. It is either between 0 and 100, or 255. 0 is off, 1 .. 99 is dimming, 100 is fully on, 255 is on to whatever behaviour thinks it should be.
+
+
+### upload_microapp.py
+TODO: finalize and document

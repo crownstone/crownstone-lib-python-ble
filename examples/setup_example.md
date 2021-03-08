@@ -48,7 +48,7 @@ async def setup_procedure():
 
     # clean up all pending processes
     print("Core shutdown")
-    core.shutDown()
+    await core.shutDown()
 
 # this is where we actually start running the example
 # Python does not allow us to run async functions like they're normal functions.
@@ -141,12 +141,12 @@ When you're all done, call the shutDown method to close any running processes.
 ```python
 # clean up all pending processes
 print("Core shutdown")
-core.shutDown()
+await core.shutDown()
 ```
 
 ### Running async code
 We wrap this part in a try-except in order to catch the SIGINT interrupts (like control+c on linux) and close the example without large errors.
-Since we use Python 3.6, we can't use asyncio.run. This means we first get an event loop, and then using that to run the async function we defined.
+`If we use asyncio.run, this will not work reliably.`
 ```python
 try:
     loop = asyncio.get_event_loop()

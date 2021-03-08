@@ -139,6 +139,7 @@ async def performMicroAppActions():
     print("===========================================\n\nFinished microapp actions\n\n===========================================")
 
 try:
+    # asyncio.run does not work here
     loop = asyncio.get_event_loop()
     loop.run_until_complete(performMicroAppActions())
 except KeyboardInterrupt:

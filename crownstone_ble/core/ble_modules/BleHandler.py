@@ -148,6 +148,7 @@ class BleHandler:
             self.scanAborted = False
             await self.scanner.stop()
 
+
     def abortScan(self):
         self.scanAborted = True
 
