@@ -75,33 +75,36 @@ class StoneAdvertisementTracker:
         if not serviceData.decrypted:
             _LOGGER.debug(f"Invalidate {self.address}, decrypted={serviceData.decrypted}")
             self.invalidateDevice(serviceData)
-        else:
-            _LOGGER.debug(f"Check {self.address}"
-                          f", id={serviceData.payload.crownstoneId}"
-                          f", uniqueIdentifier={serviceData.payload.uniqueIdentifier}"
-                          f", validation={serviceData.payload.validation}"
-                          f", opCode={serviceData.opCode}"
-                          f", advType={serviceData.payload.type}")
+            return
 
-            if not hasattr(serviceData.payload, "validation") or not hasattr(serviceData.payload, "crownstoneId"):
-                return
+        _LOGGER.debug(f"Check {self.address}"
+                      f", id={serviceData.payload.crownstoneId}"
+                      f", uniqueIdentifier={serviceData.payload.uniqueIdentifier}"
+                      f", validation={serviceData.payload.validation}"
+                      f", opCode={serviceData.opCode}"
+                      f", advType={serviceData.payload.type}")
 
-            if self.uniqueIdentifier != serviceData.payload.uniqueIdentifier:
-                self.duplicate = False
-                if serviceData.opCode == 7:
-                    if serviceData.payload.validation == 0xFA:
-                        if serviceData.payload.type == AdvType.EXTERNAL_STATE or serviceData.payload.type == AdvType.EXTERNAL_ERROR:
-                            # this is an external state payload, this means that the crownstoneId does not belong to the crownstone that broadcast it.
-                            pass
-                        else:
-                            if serviceData.payload.crownstoneId == self.crownstoneId:
-                                self.addValidMeasurement(serviceData)
-                            else:
-                                self.invalidateDevice(serviceData)
-                    else:
-                        self.invalidateDevice(serviceData)
+        if not hasattr(serviceData.payload, "validation") or not hasattr(serviceData.payload, "crownstoneId"):
+            return
+
+        if self.uniqueIdentifier == serviceData.payload.uniqueIdentifier:
+            self.duplicate = True
+            return
+
+        self.duplicate = False
+
+        if serviceData.opCode == 7:
+            if serviceData.payload.validation == 0xFA:
+                if serviceData.payload.type == AdvType.EXTERNAL_STATE or serviceData.payload.type == AdvType.EXTERNAL_ERROR:
+                    # this is an external state payload, this means that the crownstoneId does not belong to the crownstone that broadcast it.
+                    return
+
+                if serviceData.payload.crownstoneId == self.crownstoneId:
+                    self.addValidMeasurement(serviceData)
+                else:
+                    self.invalidateDevice(serviceData)
             else:
-                self.duplicate = True
+                self.invalidateDevice(serviceData)
 
     def addValidMeasurement(self, serviceData: ServiceData):
         _LOGGER.debug(f"addValidMeasurement {self.address}")
