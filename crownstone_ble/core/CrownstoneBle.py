@@ -23,7 +23,7 @@ from crownstone_ble.core.modules.SetupChecker import SetupChecker
 _LOGGER = logging.getLogger(__name__)
 
 class CrownstoneBle:
-    __version__ = "1.0.0"
+    __version__ = "2.0.0"
     
     def __init__(self, bleAdapterAddress: str = None):
         # bleAdapterAddress is the MAC address of the adapter you want to use.
