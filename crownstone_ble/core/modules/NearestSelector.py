@@ -14,15 +14,13 @@ class NearestSelector:
         if addressesToExcludeSet is None:
             self.addressesToExcludeSet = set()
         else:
-            # TODO: make all addresses lower case.
             self.addressesToExcludeSet = addressesToExcludeSet
         self.deviceList = []
         self.nearest = None
         
         
     def handleAdvertisement(self, scanData: ScanData):
-        # TODO: address should already be lower case, make it lower case at the very lowest scan handler.
-        if scanData.address.lower() in self.addressesToExcludeSet:
+        if scanData.address in self.addressesToExcludeSet:
             return
         
         if self.setupModeOnly and not scanData.operationMode == CrownstoneOperationMode.SETUP:
