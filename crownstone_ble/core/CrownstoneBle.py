@@ -25,7 +25,8 @@ _LOGGER = logging.getLogger(__name__)
 class CrownstoneBle:
     __version__ = "1.0.0"
     
-    def __init__(self, bleAdapterAddress = None):
+    def __init__(self, bleAdapterAddress: str = None):
+        # bleAdapterAddress is the MAC address of the adapter you want to use.
         self.settings  = EncryptionSettings()
         self.control   = ControlHandler(self)
         self.setup     = SetupHandler(self)

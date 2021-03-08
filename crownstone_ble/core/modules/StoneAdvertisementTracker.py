@@ -118,7 +118,7 @@ class StoneAdvertisementTracker:
 
 
     def invalidateDevice(self, serviceData: ServiceData):
-        if not serviceData.payload.type == AdvType.EXTERNAL_STATE and not serviceData.payload.type == AdvType.EXTERNAL_ERROR:
+        if serviceData.payload.type != AdvType.EXTERNAL_STATE and serviceData.payload.type != AdvType.EXTERNAL_ERROR:
             self.crownstoneId = serviceData.payload.crownstoneId
         
         self.consecutiveMatches = 0
