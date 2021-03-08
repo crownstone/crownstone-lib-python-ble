@@ -28,7 +28,7 @@ except Exception as e:
     print("ERROR", e)
     quit()
 
-async def switch():
+async def switch_crownstone():
     try:
         print("Connecting...")
         await core.connect(args.bleAddress)
@@ -43,7 +43,8 @@ async def switch():
 
 
 try:
+    # asyncio.run does not work here.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(switch())
+    loop.run_until_complete(switch_crownstone())
 except KeyboardInterrupt:
     print("Closing the test.")

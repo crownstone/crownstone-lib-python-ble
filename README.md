@@ -4,7 +4,7 @@ We're using Bleak as bluetooth backend, which supports Windows, MacOS and Linux.
 
 Since the Crownstone communicates through BLE, we can use BLE to tell it to do things!
 
-This library works with Python 3.6 and higher.
+This library works with Python 3.7 and higher.
 
 
 # Installing the library
@@ -133,22 +133,26 @@ This will stop an active scan.
 
 <br/>
 
-### `async getNearestCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+### `async getNearestCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 This will search for the nearest Crownstone. It will return ANY Crownstone, not just the ones sharing our encryption keys.
 - rssiAtLeast, you can use this to indicate a maximum distance
 - scanDuration, the amount of time we scan (in seconds)
 - returnFirstAcceptable, if this is True, we return on the first Crownstone in the rssiAtLeast range. If it is False, we will scan for the timeout duration and return the closest one.
 - addressesToExclude, this is an array of either address strings (like "f7:19:a4:ef:ea:f6") or an array of dictionaries that each contain an address field (like what you get from "getCrownstonesByScanning").
 
+If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
+
 <br/>
 
-### `async getNearestValidatedCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+### `async getNearestValidatedCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 Same as getNearestCrownstone but will only search for Crownstones with the same encryption keys.
+If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
 
 <br/>
 
-### `async getNearestSetupCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[])`
+### `async getNearestSetupCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 Same as getNearestCrownstone but will only search for Crownstones in setup mode.
+If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
 
 
 # Control Module
@@ -250,8 +254,10 @@ This topic will broadcast all incoming Crownstone scans, including those that do
 ### `BleTopics.advertisement`
 This topic will broadcast all incoming Crownstone scans which belong to your sphere (ie. which can be decrypted with your keys).
 
+
 ### Data format
 All these events contain the same data format:
+<a href="#ScanData" />
 ```python
 class ScanData:
 

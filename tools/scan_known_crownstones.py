@@ -34,7 +34,7 @@ except Exception as e:
 # this prints a small overview of all incoming scans.
 def printAdvertisements(data):
     if macFilterPassed(args.macFilter, data.address):
-        print(f'{data.address} {data.name} {data.rssi} serviceUUID = 0x{data.serviceUUID:02x}')
+        print(f'{data.address} {data.name} {data.rssi} mode={data.operationMode}')
 
 # this CAN be used for more information. This is used when verbose is on.
 def printFullAdvertisements(data):
@@ -52,6 +52,7 @@ async def scan():
     await core.shutDown()
 
 try:
+    # asyncio.run does not work here.
     loop = asyncio.get_event_loop()
     loop.run_until_complete(scan())
 except KeyboardInterrupt:

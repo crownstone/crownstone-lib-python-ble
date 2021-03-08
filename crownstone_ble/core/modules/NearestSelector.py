@@ -48,22 +48,6 @@ class NearestSelector:
             if nearest.rssi < adv.rssi < 0:
                 nearest = adv
             
-        return CrownstoneSummary(
-            nearest.name,
-            nearest.address,
-            nearest.rssi,
-            nearest.operationMode == CrownstoneOperationMode.SETUP,
-            nearest.payload.crownstoneId,
-            nearest.validated
-        )
+        return nearest
 
 
-class CrownstoneSummary:
-
-    def __init__(self, name, address, rssi, setupMode, crownstoneId, validated):
-        self.name         = name
-        self.address      = address
-        self.rssi         = rssi
-        self.setupMode    = setupMode
-        self.validated    = validated
-        self.crownstoneId = crownstoneId

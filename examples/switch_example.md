@@ -30,7 +30,7 @@ async def switch_crownstone():
     # We're done now, disconnect
     await core.control.disconnect()
 
-    core.shutDown()
+    await core.shutDown()
 
 # this is where we actually start running the example
 # Python does not allow us to run async functions like they're normal functions.
@@ -85,12 +85,12 @@ await core.control.setSwitch(0)
 await asyncio.sleep(1)
 await core.control.setSwitch(100)
 await core.control.disconnect()
-core.shutDown()
+await core.shutDown()
 ```
 
 ### Running async code
 We wrap this part in a try-except in order to catch the SIGINT interrupts (like control+c on linux) and close the example without large errors.
-Since we use Python 3.6, we can't use asyncio.run. This means we first get an event loop, and then using that to run the async function we defined.
+`If we use asyncio.run, this will not work reliably.`
 ```python
 try:
     loop = asyncio.get_event_loop()

@@ -5,7 +5,6 @@ class ScanData:
         self.rssi          = None
         self.name          = None
         self.operationMode = None
-        self.serviceUUID   = None
         self.deviceType    = None
         self.payload       = None
         self.validated     = None
@@ -16,7 +15,6 @@ class ScanData:
            f"rssi:          {self.rssi                 }\n" \
            f"name:          {self.name                 }\n" \
            f"operationMode: {self.operationMode        }\n" \
-           f"serviceUUID:   {self.serviceUUID          }\n" \
            f"deviceType:    {self.deviceType.__str__() }\n" \
            f"payload:       {self.payload              }\n" \
            f"validated:     {self.validated            }\n"
