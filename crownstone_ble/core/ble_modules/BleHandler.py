@@ -40,7 +40,8 @@ class ActiveClient:
 
 class BleHandler:
 
-    def __init__(self, settings, bleAdapterAddress=None):
+    def __init__(self, settings: EncryptionSettings, bleAdapterAddress: str=None):
+        # bleAdapterAddress is the MAC address of the adapter you want to use.
         self.activeClient = None
         self.connectedPeripherals = {}
         self.settings = settings
