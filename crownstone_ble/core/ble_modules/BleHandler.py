@@ -187,10 +187,12 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
+        _LOGGER.debug(f"setupSingleNotification: subscribe for notifications.")
         notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
         await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
+        _LOGGER.debug(f"setupSingleNotification: writeCommand().")
         await writeCommand()
 
         # wait for the results to come in.
@@ -206,6 +208,7 @@ class BleHandler:
 
         connected = await self.is_connected()
         if connected:
+            _LOGGER.debug(f"setupSingleNotification: unsubscribe for notifications.")
             await self.activeClient.client.stop_notify(characteristicUUID)
 
         return notificationDelegate.result
@@ -216,10 +219,12 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
+        _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
         notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
         await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
+        _LOGGER.debug(f"setupNotificationStream: writeCommand().")
         await writeCommand()
 
         # wait for the results to come in.
@@ -234,17 +239,20 @@ class BleHandler:
                 notificationDelegate.result = None
                 if command == ProcessType.ABORT_ERROR:
                     self.notificationLoopActive = False
+                    # TODO: unsubscribe notifications.
                     raise CrownstoneBleException(BleError.ABORT_NOTIFICATION_STREAM_W_ERROR, "Aborting the notification stream because the resultHandler raised an error.")
                 elif command == ProcessType.FINISHED:
                     self.notificationLoopActive = False
                     successful = True
 
         if not successful:
+            # TODO: unsubscribe notifications.
             raise CrownstoneBleException(BleError.NOTIFICATION_STREAM_TIMEOUT, "Notification stream not finished within timeout.")
 
         # remove subscription from this characteristic
         connected = await self.is_connected()
         if connected:
+            _LOGGER.debug(f"setupNotificationStream: unsubscribe for notifications.")
             await self.activeClient.client.stop_notify(characteristicUUID)
 
 
