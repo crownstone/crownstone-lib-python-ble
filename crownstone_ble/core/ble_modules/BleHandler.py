@@ -61,6 +61,20 @@ class BleHandler:
         self.validator = Validator()
         self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScan()))
 
+        # Dict with service UUID as key, handle as value.
+        self.services = {}
+
+        # Dict with characteristic UUID as key, handle as value.
+        self.characteristics = {}
+
+        # Current callbacks for notifications, in the form of: def handleNotification(uuid: str, data)
+        # Characteristic UUID is key, callback is value.
+        self.notificationCallbacks = {}
+
+        # Notifications we subscribed to.
+        # Handle as key, UUID as value.
+        self.notificationSubscriptions = {}
+
 
     async def shutDown(self):
         for subscriptionId in self.subscriptionIds:
@@ -96,7 +110,17 @@ class BleHandler:
         # TODO: document/convert these errors.
         connected  = await self.activeClient.client.connect()
         serviceSet = await self.activeClient.client.get_services()
-        self.activeClient.services = serviceSet.services
+        self.services = {}
+        self.characteristics = {}
+        for key, service in serviceSet.services.items():
+            self.services[service.uuid] = key
+        for key, characteristic in serviceSet.characteristics.items():
+            self.characteristics[characteristic.uuid] = characteristic.handle
+
+        self.notificationCallbacks = {}
+        self.notificationSubscriptions = {}
+
+
 
         return connected
         # print(self.activeClient.client.services.characteristics)
@@ -189,7 +213,7 @@ class BleHandler:
         # setup the collecting of the notification data.
         _LOGGER.debug(f"setupSingleNotification: subscribe for notifications.")
         notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
-        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+        await self._subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
         _LOGGER.debug(f"setupSingleNotification: writeCommand().")
@@ -204,13 +228,10 @@ class BleHandler:
 
 
         if notificationDelegate.result is None:
+            self._unsubscribeNotifications(characteristicUUID)
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
 
-        connected = await self.is_connected()
-        if connected:
-            _LOGGER.debug(f"setupSingleNotification: unsubscribe for notifications.")
-            await self.activeClient.client.stop_notify(characteristicUUID)
-
+        self._unsubscribeNotifications(characteristicUUID)
         return notificationDelegate.result
 
 
@@ -221,7 +242,7 @@ class BleHandler:
         # setup the collecting of the notification data.
         _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
         notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
-        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+        await self._subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
         _LOGGER.debug(f"setupNotificationStream: writeCommand().")
@@ -239,22 +260,18 @@ class BleHandler:
                 notificationDelegate.result = None
                 if command == ProcessType.ABORT_ERROR:
                     self.notificationLoopActive = False
-                    # TODO: unsubscribe notifications.
+                    self._unsubscribeNotifications(characteristicUUID)
                     raise CrownstoneBleException(BleError.ABORT_NOTIFICATION_STREAM_W_ERROR, "Aborting the notification stream because the resultHandler raised an error.")
                 elif command == ProcessType.FINISHED:
                     self.notificationLoopActive = False
                     successful = True
 
         if not successful:
-            # TODO: unsubscribe notifications.
+            self._unsubscribeNotifications(characteristicUUID)
             raise CrownstoneBleException(BleError.NOTIFICATION_STREAM_TIMEOUT, "Notification stream not finished within timeout.")
 
         # remove subscription from this characteristic
-        connected = await self.is_connected()
-        if connected:
-            _LOGGER.debug(f"setupNotificationStream: unsubscribe for notifications.")
-            await self.activeClient.client.stop_notify(characteristicUUID)
-
+        self._unsubscribeNotifications(characteristicUUID)
 
     def _killNotificationLoop(self):
         self.notificationLoopActive = False
@@ -262,3 +279,28 @@ class BleHandler:
 
     def _preparePayload(self, data: list or bytes or bytearray):
         return bytearray(data)
+
+
+    async def _subscribeNotifications(self, characteristicUuid: str, callback):
+        if characteristicUuid in self.notificationCallbacks:
+            _LOGGER.error(f"There is already a callback registered for {characteristicUuid}")
+
+        if characteristicUuid not in self.notificationSubscriptions.values():
+            # handle = self.characteristics.get(uuid, None)
+            # if handle is not None:
+            handle = self.characteristics[characteristicUuid]
+            await self.activeClient.client.start_notify(characteristicUuid, self._resultNotificationHandler)
+            self.notificationSubscriptions[handle] = characteristicUuid
+        self.notificationCallbacks[characteristicUuid] = callback
+
+    def _unsubscribeNotifications(self, characteristicUuid: str):
+        self.notificationCallbacks.pop(characteristicUuid, None)
+
+    def _resultNotificationHandler(self, characteristicHandle, data):
+        uuid = self.notificationSubscriptions.get(characteristicHandle, None)
+        if uuid is None:
+            _LOGGER.error(f"UUID not found for handle {characteristicHandle}")
+        callback = self.notificationCallbacks.get(uuid, None)
+        if callback is not None:
+            callback(uuid, data)
+
