@@ -11,7 +11,7 @@ class NotificationDelegate:
         self.result = None
         self.settings = settings
 
-    def handleNotification(self, cHandle, data):
+    def handleNotification(self, uuid, data):
         self.merge(data)
 
     def merge(self, data):
