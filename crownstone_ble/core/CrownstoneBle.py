@@ -72,6 +72,7 @@ class CrownstoneBle:
 
 
     async def connect(self, address, ignoreEncryption=False):
+        # TODO: let available services determine whether or not to use encryption.
         await self.ble.connect(address)
         if not ignoreEncryption:
             try:

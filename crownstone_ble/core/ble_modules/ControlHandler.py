@@ -23,6 +23,7 @@ class ControlHandler:
         self.core = bluetoothCore
 
     async def getAndSetSessionNone(self):
+        # TODO: move this function to BleHandler.
         # read the nonce
         rawNonce = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.CrownstoneService, CrownstoneCharacteristics.SessionData)
         ProcessSessionNoncePacket(rawNonce, self.core.settings.basicKey, self.core.settings)

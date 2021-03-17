@@ -103,6 +103,7 @@ class BleHandler:
 
 
     async def connect(self, address) -> bool:
+        # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
         _LOGGER.info(f"Connecting to {address}")
         # this can throw an error when the connection fails.
