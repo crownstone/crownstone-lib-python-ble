@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from os import path
+import datetime
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 from util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
@@ -13,7 +14,7 @@ parser.add_argument('-f', '--file', default=None, help='Microapp binary to uploa
 parser.add_argument('-v', '--verbose', default=False,
                     help='Verbose will show the full advertisement content, not just a single line summary.')
 
-logging.basicConfig(format='%(levelname)-7s: %(message)s', level=logging.DEBUG)
+#logging.basicConfig(format='%(levelname)-7s: %(message)s', level=logging.DEBUG)
 
 try:
     file_path = path.dirname(path.realpath(__file__))
@@ -41,7 +42,11 @@ async def main():
     await core.connect(args.bleAddress)
     # info = await core.control.getMicroappInfo()
     # print(info)
-    await core.control.uploadMicroapp(buf)
+
+    chunkSize = 192
+    print(f"{datetime.datetime.now()} Start upload with chunkSize={chunkSize}")
+    await core.control.uploadMicroapp(buf, 0, chunkSize)
+    print(f"{datetime.datetime.now()} Upload done")
     await core.disconnect()
     await core.shutDown()
 

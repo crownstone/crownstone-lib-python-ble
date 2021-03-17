@@ -139,13 +139,15 @@ class ControlHandler:
             chunk = data[i : i + chunkSize]
             # Pad the chunk with 0xFF, so the size is a multiple of 4.
             if len(chunk) % 4:
+                if isinstance(chunk, bytes):
+                    chunk = bytearray(chunk)
                 chunk.extend((4 - (len(chunk) % 4)) * [0xFF])
-            await self.uploadMicroappChunk(data[i : i + chunkSize], index)
+            await self.uploadMicroappChunk(index, chunk, i)
 
-    async def uploadMicroappChunk(self, data: bytearray, index: int):
+    async def uploadMicroappChunk(self, index: int, data: bytearray, offset: int):
         _LOGGER.info(f"Upload microapp chunk index={index} size={len(data)}")
         header = MicroappHeaderPacket(appIndex=index)
-        packet = MicroappUploadPacket(header, 0, data)
+        packet = MicroappUploadPacket(header, offset, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.toBuffer()).getPacket()
 
         def handleResult(notificationData):
