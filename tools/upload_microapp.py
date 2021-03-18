@@ -14,7 +14,7 @@ parser.add_argument('-f', '--file', default=None, help='Microapp binary to uploa
 parser.add_argument('-v', '--verbose', default=False,
                     help='Verbose will show the full advertisement content, not just a single line summary.')
 
-#logging.basicConfig(format='%(levelname)-7s: %(message)s', level=logging.DEBUG)
+# logging.basicConfig(format='%(asctime)s %(levelname)-7s: %(message)s', level=logging.DEBUG)
 
 try:
     file_path = path.dirname(path.realpath(__file__))
@@ -39,14 +39,34 @@ async def main():
     with open(args.file, "rb") as f:
         buf = f.read()
 
-    await core.connect(args.bleAddress)
-    # info = await core.control.getMicroappInfo()
-    # print(info)
+    print("First 32 bytes of the binary:")
+    print(list(buf[0:32]))
 
-    chunkSize = 192
+    await core.connect(args.bleAddress)
+    info = await core.control.getMicroappInfo()
+    print(info)
+
+    # It looks like the python library can't handle a chunk size of 256.
+    maxChunkSize = 192
+
+    # The index where we want to put our microapp.
+    appIndex = 0
+
+    # Determine the chunk size by taking the minimum of our max, and the crownstones max.
+    chunkSize = min(maxChunkSize, info.maxChunkSize)
+
     print(f"{datetime.datetime.now()} Start upload with chunkSize={chunkSize}")
-    await core.control.uploadMicroapp(buf, 0, chunkSize)
+    await core.control.uploadMicroapp(buf, appIndex, chunkSize)
     print(f"{datetime.datetime.now()} Upload done")
+
+    print("Validate..")
+    await core.control.validateMicroapp(appIndex)
+    print("Validate done")
+
+    print("Enable..")
+    await core.control.enableMicroapp(appIndex)
+    print("Enable done")
+
     await core.disconnect()
     await core.shutDown()
 

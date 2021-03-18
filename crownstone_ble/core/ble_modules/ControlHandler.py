@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
+from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException, CrownstoneError
 from crownstone_core.packets.microapp.MicroappHeaderPacket import MicroappHeaderPacket
 from crownstone_core.packets.microapp.MicroappInfoPacket import MicroappInfoPacket
 from crownstone_core.packets.microapp.MicroappUploadPacket import MicroappUploadPacket
@@ -146,7 +146,7 @@ class ControlHandler:
             await self.uploadMicroappChunk(index, chunk, i)
 
     async def uploadMicroappChunk(self, index: int, data: bytearray, offset: int):
-        _LOGGER.info(f"Upload microapp chunk index={index} size={len(data)}")
+        _LOGGER.info(f"Upload microapp chunk index={index} offset={offset} size={len(data)}")
         header = MicroappHeaderPacket(appIndex=index)
         packet = MicroappUploadPacket(header, offset, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.toBuffer()).getPacket()
@@ -174,8 +174,32 @@ class ControlHandler:
             lambda notification: handleResult(notification),
             5
         )
+        _LOGGER.info(f"uploaded chunk offset={offset}")
         # TODO: return the final result
 
+    async def validateMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.toBuffer()).getPacket()
+        result = await self.core.ble.setupSingleNotification(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket)
+        )
+        resultPacket = ResultPacket(result)
+        if resultPacket.resultCode != ResultValue.SUCCESS:
+            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
+
+    async def enableMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.toBuffer()).getPacket()
+        result = await self.core.ble.setupSingleNotification(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket)
+        )
+        resultPacket = ResultPacket(result)
+        if resultPacket.resultCode != ResultValue.SUCCESS:
+            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
 
     """
     ---------------  UTIL  ---------------
