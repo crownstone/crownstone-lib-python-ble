@@ -242,7 +242,7 @@ class BleHandler:
 
         # setup the collecting of the notification data.
         _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
-        notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
+        notificationDelegate = NotificationDelegate(None, self.settings)
         await self._subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
@@ -255,17 +255,22 @@ class BleHandler:
         successful = False
         while self.notificationLoopActive and loopCount < timeout*4:
             await asyncio.sleep(0.25)
+            _LOGGER.debug(f"loopActive={self.notificationLoopActive} loopCount={loopCount}")
             loopCount += 1
             if notificationDelegate.result is not None:
                 command = resultHandler(notificationDelegate.result)
-                notificationDelegate.result = None
+                notificationDelegate.reset()
                 if command == ProcessType.ABORT_ERROR:
+                    _LOGGER.debug("abort")
                     self.notificationLoopActive = False
                     self._unsubscribeNotifications(characteristicUUID)
                     raise CrownstoneBleException(BleError.ABORT_NOTIFICATION_STREAM_W_ERROR, "Aborting the notification stream because the resultHandler raised an error.")
                 elif command == ProcessType.FINISHED:
+                    _LOGGER.debug("finished")
                     self.notificationLoopActive = False
                     successful = True
+                elif command == ProcessType.CONTINUE:
+                    _LOGGER.debug("continue")
 
         if not successful:
             self._unsubscribeNotifications(characteristicUUID)
@@ -275,6 +280,7 @@ class BleHandler:
         self._unsubscribeNotifications(characteristicUUID)
 
     def _killNotificationLoop(self):
+        _LOGGER.debug("_killNotificationLoop")
         self.notificationLoopActive = False
 
 
@@ -283,18 +289,21 @@ class BleHandler:
 
 
     async def _subscribeNotifications(self, characteristicUuid: str, callback):
+        _LOGGER.debug(f"register callback for notifications to uuid={characteristicUuid}")
         if characteristicUuid in self.notificationCallbacks:
             _LOGGER.error(f"There is already a callback registered for {characteristicUuid}")
 
         if characteristicUuid not in self.notificationSubscriptions.values():
             # handle = self.characteristics.get(uuid, None)
             # if handle is not None:
+            _LOGGER.debug(f"subscribe to uuid={characteristicUuid}")
             handle = self.characteristics[characteristicUuid]
             await self.activeClient.client.start_notify(characteristicUuid, self._resultNotificationHandler)
             self.notificationSubscriptions[handle] = characteristicUuid
         self.notificationCallbacks[characteristicUuid] = callback
 
     def _unsubscribeNotifications(self, characteristicUuid: str):
+        _LOGGER.debug(f"remove callback for notifications to uuid={characteristicUuid}")
         self.notificationCallbacks.pop(characteristicUuid, None)
 
     def _resultNotificationHandler(self, characteristicHandle, data):
