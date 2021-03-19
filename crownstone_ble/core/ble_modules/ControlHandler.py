@@ -157,7 +157,7 @@ class ControlHandler:
                 if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
                     _LOGGER.info("Waiting for data to be stored on Crownstone.")
                     return ProcessType.CONTINUE
-                elif result.resultCode == ResultValue.SUCCESS:
+                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
                     _LOGGER.info("Data stored.")
                     return ProcessType.FINISHED
                 else:
@@ -175,7 +175,7 @@ class ControlHandler:
             5
         )
         _LOGGER.info(f"uploaded chunk offset={offset}")
-        # TODO: return the final result
+        # TODO: return the final result?
 
     async def validateMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
@@ -200,6 +200,35 @@ class ControlHandler:
         resultPacket = ResultPacket(result)
         if resultPacket.resultCode != ResultValue.SUCCESS:
             raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
+
+    async def removeMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.toBuffer()).getPacket()
+
+        def handleResult(notificationData):
+            result = ResultPacket(notificationData)
+            if result.valid:
+                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
+                    _LOGGER.info("Waiting for data to be erased on Crownstone.")
+                    return ProcessType.CONTINUE
+                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
+                    _LOGGER.info("Data erased.")
+                    return ProcessType.FINISHED
+                else:
+                    _LOGGER.warning(f"Failed: {result.resultCode}")
+                    return ProcessType.ABORT_ERROR
+            else:
+                _LOGGER.warning("Invalid result.")
+                return ProcessType.ABORT_ERROR
+
+        await self.core.ble.setupNotificationStream(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket),
+            lambda notification: handleResult(notification),
+            5
+        )
+        _LOGGER.info(f"Removed app {index}")
 
     """
     ---------------  UTIL  ---------------
