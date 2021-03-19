@@ -34,29 +34,48 @@ except Exception as e:
     print("ERROR", e)
     quit()
 
+
+# It looks like the python library can't handle a chunk size of 256.
+maxChunkSize = 192
+
+# The index where we want to put our microapp.
+appIndex = 0
+
 async def main():
     print("Main")
     with open(args.file, "rb") as f:
-        buf = f.read()
+        appData = f.read()
 
     print("First 32 bytes of the binary:")
-    print(list(buf[0:32]))
+    print(list(appData[0:32]))
 
     await core.connect(args.bleAddress)
     info = await core.control.getMicroappInfo()
     print(info)
 
-    # It looks like the python library can't handle a chunk size of 256.
-    maxChunkSize = 192
+    # Perform some checks with the info we received.
+    if appIndex >= info.maxApps:
+        print(f"This crownstone doesn't have room for index {appIndex}")
+        await core.disconnect()
+        await core.shutDown()
+        return
 
-    # The index where we want to put our microapp.
-    appIndex = 0
+    if len(appData) > info.maxAppSize:
+        print(f"This crownstone doesn't have room for a binary size of {len(appData)}")
+        await core.disconnect()
+        await core.shutDown()
+        return
+
+    # If there is already some data at this index, it has to be removed first.
+    if info.appsStatus[appIndex].tests.hasData:
+        print(f"Remove data at index {appIndex}")
+        await core.control.removeMicroapp(appIndex)
 
     # Determine the chunk size by taking the minimum of our max, and the crownstones max.
     chunkSize = min(maxChunkSize, info.maxChunkSize)
 
     print(f"{datetime.datetime.now()} Start upload with chunkSize={chunkSize}")
-    await core.control.uploadMicroapp(buf, appIndex, chunkSize)
+    await core.control.uploadMicroapp(appData, appIndex, chunkSize)
     print(f"{datetime.datetime.now()} Upload done")
 
     print("Validate..")
