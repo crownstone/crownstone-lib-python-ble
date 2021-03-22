@@ -8,7 +8,7 @@ class NormalModeChecker:
 
     def __init__(self, address, waitUntilInRequiredMode=False):
         self.address = address.lower()
-        self.result = False
+        self.result = None
         self.waitUntilInRequiredMode = waitUntilInRequiredMode
 
     def handleAdvertisement(self, scanData: ScanData):

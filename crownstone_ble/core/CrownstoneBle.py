@@ -23,16 +23,16 @@ from crownstone_ble.core.modules.SetupChecker import SetupChecker
 _LOGGER = logging.getLogger(__name__)
 
 class CrownstoneBle:
-    __version__ = "2.0.0"
+    __version__ = "2.1.0"
     
     def __init__(self, bleAdapterAddress: str = None):
         # bleAdapterAddress is the MAC address of the adapter you want to use.
-        self.settings  = EncryptionSettings()
-        self.control   = ControlHandler(self)
-        self.setup     = SetupHandler(self)
-        self.state     = StateHandler(self)
-        self.debug     = DebugHandler(self)
-        self.ble       = BleHandler(self.settings, bleAdapterAddress)
+        self.settings = EncryptionSettings()
+        self.control  = ControlHandler(self)
+        self.setup    = SetupHandler(self)
+        self.state    = StateHandler(self)
+        self.debug    = DebugHandler(self)
+        self.ble      = BleHandler(self.settings, bleAdapterAddress)
 
         self.defaultKeysOverridden = False
 
@@ -108,22 +108,80 @@ class CrownstoneBle:
         return gatherer.getCollection()
 
 
-    async def isCrownstoneInSetupMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
-        _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
-        checker = SetupChecker(address, waitUntilInRequiredMode)
+    async def waitUntilInSetupMode(self, address: str, timeout: 5):
+        """
+        This is a small sugar coating around the isCrownstoneInSetupMode
+
+        It will wait until it has verified that a Crownstone is in setup mode, or throw one of two CrownstoneBleExceptions:
+        - BleError.NOT_IN_SETUP_MODE_BEFORE_TIMEOUT
+            This means that we have received advertisements from this Crownstone but that it was not in setup mode. We waited until the timeout was over, and has not changed into setup mode.
+        - BleError.NO_SCANS_RECEIVED
+            We have not received any scans from this Crownstone, and can't say anything about it's state.
+        """
+        isInSetupMode = await self.isCrownstoneInSetupMode(address, timeout, True)
+        if not isInSetupMode:
+            raise CrownstoneBleException(BleError.NOT_IN_SETUP_MODE_BEFORE_TIMEOUT, f"We have scanned for {timeout} seconds, but the Crownstone still is not in setup mode.")
+
+    async def waitUntilInNormalMode(self, address: str, timeout: 5):
+        """
+        This is a small sugar coating around the isCrownstoneInNormalMode
+
+        It will wait until it has verified that a Crownstone is in setup mode, or throw one of two CrownstoneBleExceptions:
+        - BleError.NOT_IN_NORMAL_MODE_BEFORE_TIMEOUT
+            This means that we have received advertisements from this Crownstone but that it was not in normal mode. We waited until the timeout was over, and has not changed into normal mode.
+        - BleError.NO_SCANS_RECEIVED
+            We have not received any scans from this Crownstone, and can't say anything about it's state.
+        """
+        isInNormalMode = await self.isCrownstoneInNormalMode(address, timeout, True)
+        if not isInNormalMode:
+            raise CrownstoneBleException(BleError.NOT_IN_NORMAL_MODE_BEFORE_TIMEOUT, f"We have scanned for {timeout} seconds, but the Crownstone still is not in normal mode.")
+
+    async def isCrownstoneInSetupMode(self, address: str, scanDuration=3, waitUntilInSetupMode=False) -> bool:
+        """
+        This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
+        With default value for waitUntilInSetupMode (False), it will return True if the Crownstone is in setup mode, False if it isn't.
+
+        You can use the boolean waitUntilInSetupMode to have it ignore advertisements from this Crownstone in other modes than setup mode.
+
+        It can throw the following CrownstoneBleException
+        - BleError.NO_SCANS_RECEIVED
+            We have not received any scans from this Crownstone, and can't say anything about it's state.
+        """
+        _LOGGER.debug(f"isCrownstoneInSetupMode address={address} scanDuration={scanDuration} waitUntilInSetupMode={waitUntilInSetupMode}")
+        checker = SetupChecker(address, waitUntilInSetupMode)
         subscriptionId = BleEventBus.subscribe(BleTopics.advertisement, checker.handleAdvertisement)
         await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
-        return checker.getResult()
+        result = checker.getResult()
+
+        if result is None:
+            raise CrownstoneBleException(BleError.NO_SCANS_RECEIVED, f'During the {scanDuration} seconds of scanning, no advertisement was received from this address.')
+
+        return result
 
 
-    async def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInRequiredMode=False):
-        _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInRequiredMode}")
-        checker = NormalModeChecker(address, waitUntilInRequiredMode)
+    async def isCrownstoneInNormalMode(self, address, scanDuration=3, waitUntilInNormalMode=False) -> bool:
+        """
+        This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
+        With default value for waitUntilInSetupMode (False), it will return True if the Crownstone is in normal mode, False if it isn't.
+
+        You can use the boolean waitUntilInNormalMode, to have it ignore advertisements from this Crownstone in other modes than setup mode.
+
+        It can throw the following CrownstoneBleException
+        - BleError.NO_SCANS_RECEIVED
+            We have not received any scans from this Crownstone, and can't say anything about it's state.
+        """
+        _LOGGER.debug(f"isCrownstoneInNormalMode address={address} scanDuration={scanDuration} waitUntilInRequiredMode={waitUntilInNormalMode}")
+        checker = NormalModeChecker(address, waitUntilInNormalMode)
         subscriptionId = BleEventBus.subscribe(BleTopics.rawAdvertisement, lambda scanData: checker.handleAdvertisement(scanData))
         await self.ble.scan(duration=scanDuration)
         BleEventBus.unsubscribe(subscriptionId)
-        return checker.getResult()
+        result = checker.getResult()
+
+        if result is None:
+            raise CrownstoneBleException(BleError.NO_SCANS_RECEIVED, f'During the {scanDuration} seconds of scanning, no advertisement was received from this address.')
+
+        return result
 
 
     async def getRssiAverage(self, address, scanDuration=3):
