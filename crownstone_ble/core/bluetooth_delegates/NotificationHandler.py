@@ -25,6 +25,9 @@ class NotificationHandler:
         await self.activeClient.client.start_notify(self.characteristicUUID, self.handleNotification)
         self.loopActive = True
 
+    async def cleanup(self):
+        await self.activeClient.client.stop_notify(self.characteristicUUID)
+
     def handleNotification(self, cHandle, data):
         self.merge(data)
 

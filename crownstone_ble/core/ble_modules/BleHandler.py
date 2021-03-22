@@ -189,7 +189,7 @@ class BleHandler:
 
         connected = await self.is_connected()
         if connected:
-            await self.activeClient.client.stop_notify(characteristicUUID)
+            await notificationDelegate.cleanup()
 
         return resultPacket
 
@@ -217,7 +217,7 @@ class BleHandler:
         # remove subscription from this characteristic
         connected = await self.is_connected()
         if connected:
-            await self.activeClient.client.stop_notify(characteristicUUID)
+            await notificationDelegate.cleanup()
 
 
     def _preparePayload(self, data: list or bytes or bytearray):
