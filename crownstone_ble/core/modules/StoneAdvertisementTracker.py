@@ -19,7 +19,7 @@ Each 'update()':
 class StoneAdvertisementTracker:
 
     def __init__(self, cleanupCallback):
-        self.address           = None
+        self.address          = None
         self.uniqueIdentifier = None
         self.crownstoneId     = 0
         self.cleanupCallback  = None
