@@ -26,9 +26,22 @@ class ActiveClient:
     def __init__(self, address, cleanupCallback, bleAdapterAddress):
         self.address = address
         self.client = BleakClient(address, adapter=bleAdapterAddress)
-        self.services = None
         self.cleanupCallback = cleanupCallback
         self.client.set_disconnected_callback(self.forcedDisconnect)
+
+        # Dict with service UUID as key, handle as value.
+        self.services = {}
+
+        # Dict with characteristic UUID as key, handle as value.
+        self.characteristics = {}
+
+        # Current callbacks for notifications, in the form of: def handleNotification(uuid: str, data)
+        # Characteristic UUID is key, callback is value.
+        self.notificationCallbacks = {}
+
+        # Notifications we subscribed to.
+        # Handle as key, UUID as value.
+        self.notificationSubscriptions = {}
 
     def forcedDisconnect(self, data):
         BleEventBus.emit(SystemBleTopics.forcedDisconnect, self.address)
@@ -37,29 +50,59 @@ class ActiveClient:
     async def isConnected(self):
         return await self.client.is_connected()
 
+    async def subscribeNotifications(self, characteristicUuid: str, callback):
+        _LOGGER.debug(f"register callback for notifications to uuid={characteristicUuid}")
+        if characteristicUuid in self.notificationCallbacks:
+            _LOGGER.error(f"There is already a callback registered for {characteristicUuid}")
+
+        if characteristicUuid not in self.notificationSubscriptions.values():
+            # handle = self.characteristics.get(uuid, None)
+            # if handle is not None:
+            _LOGGER.debug(f"subscribe to uuid={characteristicUuid}")
+            handle = self.characteristics[characteristicUuid]
+            await self.client.start_notify(characteristicUuid, self._resultNotificationHandler)
+            self.notificationSubscriptions[handle] = characteristicUuid
+        self.notificationCallbacks[characteristicUuid] = callback
+
+    def unsubscribeNotifications(self, characteristicUuid: str):
+        _LOGGER.debug(f"remove callback for notifications to uuid={characteristicUuid}")
+        self.notificationCallbacks.pop(characteristicUuid, None)
+
+    def _resultNotificationHandler(self, characteristicHandle, data):
+        uuid = self.notificationSubscriptions.get(characteristicHandle, None)
+        if uuid is None:
+            _LOGGER.error(f"UUID not found for handle {characteristicHandle}")
+        callback = self.notificationCallbacks.get(uuid, None)
+        if callback is not None:
+            callback(uuid, data)
+
 
 
 class BleHandler:
 
     def __init__(self, settings: EncryptionSettings, bleAdapterAddress: str=None):
         # bleAdapterAddress is the MAC address of the adapter you want to use.
-        self.activeClient = None
-        self.connectedPeripherals = {}
-        self.settings = settings
 
+        self.settings = settings
+        self.bleAdapterAddress = bleAdapterAddress
+
+        # Connection
+        self.activeClient: ActiveClient or None = None
+
+        # Scanning
         self.scanner = BleakScanner(adapter=bleAdapterAddress)
         self.scanningActive = False
         self.scanAborted = False
         scanDelegate = BleakScanDelegate(self.settings)
         self.scanner.register_detection_callback(scanDelegate.handleDiscovery)
 
-        self.bleAdapterAddress = bleAdapterAddress
-
-        self.notificationLoopActive = False
+        # Event bus
         self.subscriptionIds = []
-
         self.validator = Validator()
         self.subscriptionIds.append(BleEventBus.subscribe(SystemBleTopics.abortScanning, lambda x: self.abortScan()))
+
+        # To be moved to active client or notification handler.
+        self.notificationLoopActive = False
 
 
     async def shutDown(self):
@@ -89,6 +132,7 @@ class BleHandler:
 
 
     async def connect(self, address) -> bool:
+        # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
         _LOGGER.info(f"Connecting to {address}")
         # this can throw an error when the connection fails.
@@ -96,7 +140,17 @@ class BleHandler:
         # TODO: document/convert these errors.
         connected  = await self.activeClient.client.connect()
         serviceSet = await self.activeClient.client.get_services()
-        self.activeClient.services = serviceSet.services
+        self.activeClient.services = {}
+        self.activeClient.characteristics = {}
+        for key, service in serviceSet.services.items():
+            self.activeClient.services[service.uuid] = key
+        for key, characteristic in serviceSet.characteristics.items():
+            self.activeClient.characteristics[characteristic.uuid] = characteristic.handle
+
+        self.activeClient.notificationCallbacks = {}
+        self.activeClient.notificationSubscriptions = {}
+
+
 
         return connected
         # print(self.activeClient.client.services.characteristics)
@@ -187,27 +241,28 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
+        _LOGGER.debug(f"setupSingleNotification: subscribe for notifications.")
         notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
-        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+        await self.activeClient.subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
+        _LOGGER.debug(f"setupSingleNotification: writeCommand().")
         await writeCommand()
 
         # wait for the results to come in.
         self.notificationLoopActive = True
         loopCount = 0
-        while self.notificationLoopActive and loopCount < 50:
-            await asyncio.sleep(0.25)
+        polInterval = 0.1
+        while self.notificationLoopActive and loopCount < (12.5 / polInterval):
+            await asyncio.sleep(polInterval)
             loopCount += 1
 
 
         if notificationDelegate.result is None:
+            self.activeClient.unsubscribeNotifications(characteristicUUID)
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
 
-        connected = await self.is_connected()
-        if connected:
-            await self.activeClient.client.stop_notify(characteristicUUID)
-
+        self.activeClient.unsubscribeNotifications(characteristicUUID)
         return notificationDelegate.result
 
 
@@ -216,41 +271,53 @@ class BleHandler:
         await self.is_connected_guard()
 
         # setup the collecting of the notification data.
-        notificationDelegate = NotificationDelegate(self._killNotificationLoop, self.settings)
-        await self.activeClient.client.start_notify(characteristicUUID, notificationDelegate.handleNotification)
+        _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
+        notificationDelegate = NotificationDelegate(None, self.settings)
+        await self.activeClient.subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
         # execute something that will trigger the notifications
+        _LOGGER.debug(f"setupNotificationStream: writeCommand().")
         await writeCommand()
 
         # wait for the results to come in.
         self.notificationLoopActive = True
         loopCount = 0
         successful = False
-        while self.notificationLoopActive and loopCount < timeout*4:
-            await asyncio.sleep(0.25)
+        polInterval = 0.1
+        while self.notificationLoopActive and loopCount < (timeout / polInterval):
+            await asyncio.sleep(polInterval)
+            _LOGGER.debug(f"loopActive={self.notificationLoopActive} loopCount={loopCount}")
             loopCount += 1
             if notificationDelegate.result is not None:
                 command = resultHandler(notificationDelegate.result)
-                notificationDelegate.result = None
+                notificationDelegate.reset()
                 if command == ProcessType.ABORT_ERROR:
+                    _LOGGER.debug("abort")
                     self.notificationLoopActive = False
+                    self.activeClient.unsubscribeNotifications(characteristicUUID)
                     raise CrownstoneBleException(BleError.ABORT_NOTIFICATION_STREAM_W_ERROR, "Aborting the notification stream because the resultHandler raised an error.")
                 elif command == ProcessType.FINISHED:
+                    _LOGGER.debug("finished")
                     self.notificationLoopActive = False
                     successful = True
+                elif command == ProcessType.CONTINUE:
+                    _LOGGER.debug("continue")
 
         if not successful:
+            self.activeClient.unsubscribeNotifications(characteristicUUID)
             raise CrownstoneBleException(BleError.NOTIFICATION_STREAM_TIMEOUT, "Notification stream not finished within timeout.")
 
         # remove subscription from this characteristic
-        connected = await self.is_connected()
-        if connected:
-            await self.activeClient.client.stop_notify(characteristicUUID)
-
+        self.activeClient.unsubscribeNotifications(characteristicUUID)
 
     def _killNotificationLoop(self):
+        _LOGGER.debug("_killNotificationLoop")
         self.notificationLoopActive = False
 
 
     def _preparePayload(self, data: list or bytes or bytearray):
         return bytearray(data)
+
+
+
+

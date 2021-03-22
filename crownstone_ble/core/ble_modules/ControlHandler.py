@@ -1,10 +1,14 @@
 import asyncio
+import logging
 
-from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
-from crownstone_core.packets.MicroappPacket import MicroappPacketInternal, MicroappRequestPacket, MicroappValidatePacket, MicroappEnablePacket
+from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException, CrownstoneError
+from crownstone_core.packets.microapp.MicroappHeaderPacket import MicroappHeaderPacket
+from crownstone_core.packets.microapp.MicroappInfoPacket import MicroappInfoPacket
+from crownstone_core.packets.microapp.MicroappUploadPacket import MicroappUploadPacket
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
-from crownstone_core.protocol.BluenetTypes import ProcessType
+from crownstone_core.protocol.BlePackets import ControlPacket
+from crownstone_core.protocol.BluenetTypes import ProcessType, ControlType, ResultValue
 from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
@@ -12,12 +16,14 @@ from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
 
 from crownstone_ble.Exceptions import BleError
 
+_LOGGER = logging.getLogger(__name__)
 
 class ControlHandler:
     def __init__(self, bluetoothCore):
         self.core = bluetoothCore
 
     async def getAndSetSessionNone(self):
+        # TODO: move this function to BleHandler.
         # read the nonce
         rawNonce = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.CrownstoneService, CrownstoneCharacteristics.SessionData)
         ProcessSessionNoncePacket(rawNonce, self.core.settings.basicKey, self.core.settings)
@@ -114,111 +120,115 @@ class ControlHandler:
         else:
             raise CrownstoneException(BleError.NOT_IN_RECOVERY_MODE, "The recovery mechanism has expired. It is only available briefly after the Crownstone is powered on.")
 
-    async def sendMicroapp(self, data):
-        """
-        :param data: byte array
-        """
-        # TODO: the control handler should be stateless! You cant use this here! if this is a multi-function thing, make it a separate class
-        #   Maybe put all the microapp stuff under a different handler?
-        self._microapp = MicroappPacketInternal(data)
-        await self._sendMicroappInternal(True)
-
-    async def _sendMicroappInternal(self, firstTime):
-        if not firstTime:
-            if not self._microapp.nextAvailable():
-                print("LOG: Finish stream")
-                return ProcessType.FINISHED
-
-            self._microapp.update()
-
-        # logStr = "LOG: write part %i of %i (size = %i)\n" % (self._microapp.index + 1, self._microapp.count, self._microapp.data.size)
-        # sys.stdout.write(logStr);
-
-        if firstTime:
-            timeout = self._microapp.count * 10
-            print(f"LOG: Use (for the overall connection) a timeout of {timeout} for {self._microapp.count} chunks")
-
-            self.core.ble.setupNotificationStream(
-                CSServices.CrownstoneService,
-                CrownstoneCharacteristics.Result,
-                lambda: self._writeControlPacket(ControlPacketsGenerator.getMicroAppUploadPacket(
-                    self._microapp.getPacket())),
-                lambda notificationResult: self._handleResult(notificationResult),
-                timeout
-            )
-        else:
-            # Notification handler already set up, no need to do it again
-            await self._writeControlPacket(ControlPacketsGenerator.getMicroAppUploadPacket(
-                    self._microapp.getPacket()))
-            return ProcessType.CONTINUE
 
 
-    async def enableMicroapp(self, command_packet):
-        """
-         TODO: remove the command_packet interface and just put the required arguments as actual function arguments.
-         TODO: get rid of the wrap, unwrap, wrap, unwrap setup.
-         TODO: create separate enable/disable methods.
-        """
-        packet = MicroappEnablePacket(command_packet)
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppEnablePacket(packet))
+    async def getMicroappInfo(self) -> MicroappInfoPacket:
+        controlPacket = ControlPacket(ControlType.MICROAPP_GET_INFO).getPacket()
+        result = await self.core.ble.setupSingleNotification(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket)
+        )
+        _LOGGER.info(f"getMicroappInfo {result}")
+        resultPacket = ResultPacket(result)
+        _LOGGER.info(f"getMicroappInfo {resultPacket}")
+        infoPacket = MicroappInfoPacket(resultPacket.payload)
+        return infoPacket
 
-    async def requestMicroapp(self, command):
-        """
-         TODO: remove the command_packet interface and just put the required arguments as actual function arguments.
-         TODO: get rid of the wrap, unwrap, wrap, unwrap setup.
-        """
-        packet = MicroappRequestPacket(command)
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppRequestPacket(packet))
+    async def uploadMicroapp(self, data: bytearray, index: int = 0, chunkSize: int = 128):
+        for i in range(0, len(data), chunkSize):
+            chunk = data[i : i + chunkSize]
+            # Pad the chunk with 0xFF, so the size is a multiple of 4.
+            if len(chunk) % 4:
+                if isinstance(chunk, bytes):
+                    chunk = bytearray(chunk)
+                chunk.extend((4 - (len(chunk) % 4)) * [0xFF])
+            await self.uploadMicroappChunk(index, chunk, i)
 
-#        # Get response
-#        timeout = self._microapp.count * 10
-#
-#        self.core.ble.setupNotificationStream(
-#            CSServices.CrownstoneService,
-#            CrownstoneCharacteristics.Result,
-#            lambda: await self._writeControlPacket(
-#                ControlPacketsGenerator.getMicroAppMetaPacket(
-#                    self._microapp.getMetaPacket(packet.param0)))
-#            lambda notificationResult: self._handleResult(notificationResult),
-#            timeout
-#        )
+    async def uploadMicroappChunk(self, index: int, data: bytearray, offset: int):
+        _LOGGER.info(f"Upload microapp chunk index={index} offset={offset} size={len(data)}")
+        header = MicroappHeaderPacket(appIndex=index)
+        packet = MicroappUploadPacket(header, offset, data)
+        controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.toBuffer()).getPacket()
 
-    async def validateMicroapp(self, command):
-        packet = MicroappValidatePacket(command)
-        packet.calculateChecksum()
-        await self._writeControlPacket(ControlPacketsGenerator.getMicroAppValidatePacket(packet))
+        def handleResult(notificationData):
+            result = ResultPacket(notificationData)
+            if result.valid:
+                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
+                    _LOGGER.info("Waiting for data to be stored on Crownstone.")
+                    return ProcessType.CONTINUE
+                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
+                    _LOGGER.info("Data stored.")
+                    return ProcessType.FINISHED
+                else:
+                    _LOGGER.warning(f"Failed: {result.resultCode}")
+                    return ProcessType.ABORT_ERROR
+            else:
+                _LOGGER.warning("Invalid result.")
+                return ProcessType.ABORT_ERROR
 
-    def _handleResult(self, notificationResult):
-        if notificationResult:
-            resultPacket = ResultPacket(notificationResult)
-            if not resultPacket.valid:
-                print("Invalid result packet")
-                return
+        await self.core.ble.setupNotificationStream(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket),
+            lambda notification: handleResult(notification),
+            5
+        )
+        _LOGGER.info(f"uploaded chunk offset={offset}")
+        # TODO: return the final result?
 
-            err_code = resultPacket.resultCode
-            # Only print atypical error codes
-            if err_code != 0x00 and err_code != 0x01:
-                print("Err code" , err_code)
+    async def validateMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.toBuffer()).getPacket()
+        result = await self.core.ble.setupSingleNotification(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket)
+        )
+        resultPacket = ResultPacket(result)
+        if resultPacket.resultCode != ResultValue.SUCCESS:
+            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
 
-            # Display type of return code (error)
-            if err_code == 0x20:
-                print("LOG: ERR_WRONG_PAYLOAD_LENGTH")
-            if err_code == 0x70:
-                print("LOG: ERR_EVENT_UNHANDLED")
-            if err_code == 0x10:
-                print("LOG: NRF_ERROR_INVALID_ADDR")
-            if err_code == 0x27:
-                print("LOG: ERR_BUSY")
-            if err_code == 0x22:
-                print("LOG: ERR_INVALID_MESSAGE")
+    async def enableMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.toBuffer()).getPacket()
+        result = await self.core.ble.setupSingleNotification(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket)
+        )
+        resultPacket = ResultPacket(result)
+        if resultPacket.resultCode != ResultValue.SUCCESS:
+            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
 
-            # Normal error codes (first wait for success, then success)
-            if err_code == 0x01:
-                print("LOG: ERR_WAIT_FOR_SUCCESS")
-            if err_code == 0x00:
-                print("LOG: ERR_SUCCESS")
-                return self._sendMicroappInternal(False)
+    async def removeMicroapp(self, index):
+        packet = MicroappHeaderPacket(index)
+        controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.toBuffer()).getPacket()
 
+        def handleResult(notificationData):
+            result = ResultPacket(notificationData)
+            if result.valid:
+                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
+                    _LOGGER.info("Waiting for data to be erased on Crownstone.")
+                    return ProcessType.CONTINUE
+                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
+                    _LOGGER.info("Data erased.")
+                    return ProcessType.FINISHED
+                else:
+                    _LOGGER.warning(f"Failed: {result.resultCode}")
+                    return ProcessType.ABORT_ERROR
+            else:
+                _LOGGER.warning("Invalid result.")
+                return ProcessType.ABORT_ERROR
+
+        await self.core.ble.setupNotificationStream(
+            CSServices.CrownstoneService,
+            CrownstoneCharacteristics.Result,
+            lambda: self._writeControlPacket(controlPacket),
+            lambda notification: handleResult(notification),
+            5
+        )
+        _LOGGER.info(f"Removed app {index}")
 
     """
     ---------------  UTIL  ---------------

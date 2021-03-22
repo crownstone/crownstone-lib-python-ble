@@ -1,36 +1,20 @@
 #!/usr/bin/env python3
-
-"""
-
-  This tool allows the user to perform commands for the Microapp.
-
-    TODO: explain what all the actions do.
-        request
-        upload
-        validate
-        enable
-        disable
-        all       -- This does request, upload, validate and enable
-
-    TODO: Decide on API
-
-"""
-
 import asyncio
-from sys import path
+import logging
+from os import path
+import datetime
 
-from crownstone_ble import CrownstoneBle
-from crownstone_core.packets.MicroappPacket import MicroappUploadCmd, MicroappRequestCmd, MicroappValidateCmd, MicroappEnableCmd
+from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
+from util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
-from tools.util.config import setupDefaultCommandLineArguments, getToolConfig, loadKeysFromConfig
 
-parser = setupDefaultCommandLineArguments("Microapp commands.")
-parser.add_argument('bleAddress',
-        help='The BLE address of Crownstone to switch')
-parser.add_argument('microapp', 
-        help='The microapp (.obj) file to be sent.')
-parser.add_argument('action',
-        help='The action to be done (request, upload, validate, enable, disable, all).')
+parser = setupDefaultCommandLineArguments('Scan for any Crownstones continuously and print the results.')
+parser.add_argument('-a', '--bleAddress', required=True, help='The MAC address/handle of the Crownstone you want to connect to')
+parser.add_argument('-f', '--file', default=None, help='Microapp binary to upload')
+parser.add_argument('-v', '--verbose', default=False,
+                    help='Verbose will show the full advertisement content, not just a single line summary.')
+
+# logging.basicConfig(format='%(asctime)s %(levelname)-7s: %(message)s', level=logging.DEBUG)
 
 try:
     file_path = path.dirname(path.realpath(__file__))
@@ -38,26 +22,6 @@ try:
 except Exception as e:
     print("ERROR", e)
     quit()
-
-
-# Each action can be executed individually or at once.
-actions = set()
-if args.action == 'request':
-    actions.add('request')
-if args.action == 'upload':
-    actions.add('upload')
-if args.action == 'validate':
-    actions.add('validate')
-if args.action == 'enable':
-    actions.add('enable')
-if args.action == 'disable':
-    actions.add('disable')
-if args.action == 'all':
-    actions.add('request')
-    actions.add('upload')
-    actions.add('validate')
-    actions.add('enable')
-
 
 # create the library instance
 print(f'Initializing tool with bleAdapterAddress={tool_config["bleAdapterAddress"]}')
@@ -71,76 +35,63 @@ except Exception as e:
     quit()
 
 
-# --------------------- Starting the bluetooth part --------------------- #
-async def performMicroAppActions():
-    print("Connecting to", args.bleAddress)
-    try:
-        await core.connect(args.bleAddress)
-    except:
-        print(f"Something went wrong while connecting to {args.bleAddress}")
-        core.shutDown()
-        quit()
+# It looks like the python library can't handle a chunk size of 256.
+maxChunkSize = 192
 
-    print("Read microapp to be sent", args.microapp)
-    with open(args.microapp, "rb") as fileHandle:
-        micro_app_content = fileHandle.read()
+# The index where we want to put our microapp.
+appIndex = 0
 
-    # Only support for a single app (for now)
-    app_id = 0
+async def main():
+    print("Main")
+    with open(args.file, "rb") as f:
+        appData = f.read()
 
-    # We are at microapp protocol version 0. This version has to be supported by both the python lib and the firmware
-    # version at the Crownstone you are uploading to.
-    protocol = 0
+    print("First 32 bytes of the binary:")
+    print(list(appData[0:32]))
 
-    # The chunk size should be the same as on the Crownstone. The chunk size depends on the MTU settings of the
-    # firmware. It is therefore considered dynamic. We check if we use the proper chunk_size with a request.
-    chunk_size = 40
+    await core.connect(args.bleAddress)
+    info = await core.control.getMicroappInfo()
+    print(info)
 
-    # Offset of dummy_main in executable (use nm, objdump, readelf, etc.)
-    offset=0xB4
+    # Perform some checks with the info we received.
+    if appIndex >= info.maxApps:
+        print(f"This crownstone doesn't have room for index {appIndex}")
+        await core.disconnect()
+        await core.shutDown()
+        return
 
-    # Location of _mainCRTStartup
-    offset=0x40
+    if len(appData) > info.maxAppSize:
+        print(f"This crownstone doesn't have room for a binary size of {len(appData)}")
+        await core.disconnect()
+        await core.shutDown()
+        return
 
-    offset=0x0
+    # If there is already some data at this index, it has to be removed first.
+    if info.appsStatus[appIndex].tests.hasData:
+        print(f"Remove data at index {appIndex}")
+        await core.control.removeMicroapp(appIndex)
 
-    if 'request' in actions:
-        print('Request a new app upload')
-        cmd = MicroappRequestCmd(protocol, app_id, micro_app_content, chunk_size)
-        await core.control.requestMicroapp(cmd)
+    # Determine the chunk size by taking the minimum of our max, and the crownstones max.
+    chunkSize = min(maxChunkSize, info.maxChunkSize)
 
-    if 'upload' in actions:
-        print('Upload the data itself (this is a sequence of commands)')
-        cmd = MicroappUploadCmd(protocol, app_id, micro_app_content, chunk_size)
-        await core.control.sendMicroapp(cmd)
+    print(f"{datetime.datetime.now()} Start upload with chunkSize={chunkSize}")
+    await core.control.uploadMicroapp(appData, appIndex, chunkSize)
+    print(f"{datetime.datetime.now()} Upload done")
 
-    if 'validate' in actions:
-        print('Validate')
-        cmd = MicroappValidateCmd(protocol, app_id, micro_app_content, chunk_size)
-        await core.control.validateMicroapp(cmd)
+    print("Validate..")
+    await core.control.validateMicroapp(appIndex)
+    print("Validate done")
 
-    if 'enable' in actions:
-        print('Enable the app')
-        cmd = MicroappEnableCmd(protocol, app_id, True, offset)
-        await core.control.enableMicroapp(cmd)
+    print("Enable..")
+    await core.control.enableMicroapp(appIndex)
+    print("Enable done")
 
-    if 'disable' in actions:
-        print('Disable the app')
-        cmd = MicroappEnableCmd(protocol, app_id, False, 0x00)
-        await core.control.enableMicroapp(cmd)
-
-    print("Make sure commands have been received, sleep for 4 seconds...")
-    await asyncio.sleep(4)
-
-    print("Disconnect")
-    await core.control.disconnect()
+    await core.disconnect()
     await core.shutDown()
 
-    print("===========================================\n\nFinished microapp actions\n\n===========================================")
-
 try:
-    # asyncio.run does not work here
+    # asyncio.run does not work here.
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(performMicroAppActions())
+    loop.run_until_complete(main())
 except KeyboardInterrupt:
-    print("Closing the microapp tool.")
+    print("Stopping.")
