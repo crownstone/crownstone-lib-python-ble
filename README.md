@@ -58,6 +58,26 @@ This will scan (blocking) for scanDuration. After which it will return True or F
 
 <br/>
 
+### `async def getMode(self, address, scanDuration=3) -> CrownstoneOperationMode`
+This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
+We will return once we know.
+
+It can throw the following CrownstoneBleException
+- BleError.NO_SCANS_RECEIVED
+    We have not received any scans from this Crownstone, and can't say anything about it's state.
+<br/>
+
+### `async def waitForMode(self, address, requiredMode: CrownstoneOperationMode, scanDuration=3) -> CrownstoneOperationMode`
+This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode. We will
+scan for the scanDuration amount of seconds or until the Crownstone is in the required mode.
+
+It can throw the following CrownstoneBleException
+- BleError.NO_SCANS_RECEIVED
+    We have not received any scans from this Crownstone, and can't say anything about it's state.
+- BleError.DIFFERENT_MODE_THAN_REQUIRED
+    During the {scanDuration} seconds of scanning, the Crownstone was not in the required mode.
+<br/>
+
 ### `async shutDown()`
 Shut down the BLE module. This is should be done on closing your script.
 
