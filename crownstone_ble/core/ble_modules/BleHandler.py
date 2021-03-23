@@ -25,7 +25,10 @@ class ActiveClient:
 
     def __init__(self, address, cleanupCallback, bleAdapterAddress):
         self.address = address
-        self.client = BleakClient(address, adapter=bleAdapterAddress)
+        if bleAdapterAddress is None:
+            self.client = BleakClient(address)
+        else:
+            self.client = BleakClient(address, adapter=bleAdapterAddress)
         self.cleanupCallback = cleanupCallback
         self.client.set_disconnected_callback(self.forcedDisconnect)
 
