@@ -206,8 +206,6 @@ class CrownstoneBle:
         if result != requiredMode:
             raise CrownstoneBleException(BleError.DIFFERENT_MODE_THAN_REQUIRED, f'During the {scanDuration} seconds of scanning, the Crownstone was not in the required mode..')
 
-        return
-
 
 
     async def getRssiAverage(self, address, scanDuration=3):
