@@ -110,7 +110,7 @@ class CrownstoneBle:
 
 
     async def isCrownstoneInSetupMode(self, address: str, scanDuration=3, waitUntilInSetupMode=False) -> bool:
-        print("isCrownstoneInSetupMode is deprecated. Will be removed in v3. Use either getMode or waitForMode instead.")
+        _LOGGER.warning("isCrownstoneInSetupMode is deprecated. Will be removed in v3. Use either getMode or waitForMode instead.")
         """
         This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
         With default value for waitUntilInSetupMode (False), it will return True if the Crownstone is in setup mode, False if it isn't.
