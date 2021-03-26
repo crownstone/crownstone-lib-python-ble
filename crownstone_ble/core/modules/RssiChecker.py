@@ -11,7 +11,9 @@ class RssiChecker:
         if scanData.address != self.address:
             return
 
-        self.result.append(scanData.rssi)
+        # ensure we only use valid RSSI measurements
+        if 0 > scanData.rssi > -100:
+            self.result.append(scanData.rssi)
 
 
     def getResult(self):
