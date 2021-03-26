@@ -1,2 +1,2 @@
 crownstone-core~=2.1
-bleak~=0.10
+bleak==0.10
