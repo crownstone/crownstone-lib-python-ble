@@ -77,15 +77,15 @@ class StoneAdvertisementTracker:
             self.invalidateDevice(serviceData)
             return
 
+        if not hasattr(serviceData.payload, "validation") or not hasattr(serviceData.payload, "crownstoneId"):
+            return
+
         _LOGGER.debug(f"Check {self.address}"
                       f", id={serviceData.payload.crownstoneId}"
                       f", uniqueIdentifier={serviceData.payload.uniqueIdentifier}"
                       f", validation={serviceData.payload.validation}"
                       f", opCode={serviceData.opCode}"
                       f", advType={serviceData.payload.type}")
-
-        if not hasattr(serviceData.payload, "validation") or not hasattr(serviceData.payload, "crownstoneId"):
-            return
 
         if self.uniqueIdentifier == serviceData.payload.uniqueIdentifier:
             self.duplicate = True
