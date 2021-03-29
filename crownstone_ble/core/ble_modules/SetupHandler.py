@@ -42,7 +42,7 @@ class SetupHandler:
         )
 
         _LOGGER.info("Closing Setup V2.")
-        await self.core.settings.exitSetup()
+        self.core.settings.exitSetup()
 
 
     async def _writeFastSetupV2(self, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
