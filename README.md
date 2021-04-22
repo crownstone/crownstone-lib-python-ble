@@ -16,12 +16,6 @@ We use `pip3` in the example below because pip is usually the python 2 client. I
 pip3 install crownstone_ble
 ```
 
-You can also build the library from the project itself by:
-
-```
-sudo python3 setup.py install
-```
-
 # Async functions
 
 This library uses async methods. This is part of Python and uses the asyncio core module to do this. Async methods must be awaited.
