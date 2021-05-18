@@ -58,8 +58,8 @@ def printAdvertisements(data: ScanData):
         inMemoryDb[data.payload.crownstoneId] = data.payload.assetFilterMasterVersion
         print(inMemoryDb)
         alternativeStates += 1
-    elif scansSeen % 10 == 0:
-        print("Processed", scansSeen, "advertisements.", alternativeStates, "found in alternativeState mode. Distribution:", typeDistribution)
+    elif scansSeen % 50 == 0:
+        print("Processed", scansSeen, "advertisements.", alternativeStates, "found in alternativeState mode.")
 
 
 BleEventBus.subscribe(BleTopics.advertisement, printAdvertisements)
