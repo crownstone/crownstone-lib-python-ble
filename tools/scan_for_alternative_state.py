@@ -35,6 +35,7 @@ except Exception as e:
 
 
 inMemoryDb = {}
+typeDistribution = {}
 scansSeen = 0
 alternativeStates = 0
 
@@ -45,13 +46,20 @@ def printAdvertisements(data: ScanData):
 
     global scansSeen
     global alternativeStates
+    global inMemoryDb
+    global typeDistribution
+
     scansSeen += 1
+    if data.payload.type not in typeDistribution:
+        typeDistribution[data.payload.type] = 0
+    typeDistribution[data.payload.type] += 1
+
     if data.payload.type == AdvType.ALTERNATIVE_STATE:
         inMemoryDb[data.payload.crownstoneId] = data.payload.assetFilterMasterVersion
         print(inMemoryDb)
         alternativeStates += 1
     elif scansSeen % 10 == 0:
-        print("Processed", scansSeen, "advertisements. ", alternativeStates, "found in alternativeState mode.")
+        print("Processed", scansSeen, "advertisements.", alternativeStates, "found in alternativeState mode. Distribution:", typeDistribution)
 
 
 BleEventBus.subscribe(BleTopics.advertisement, printAdvertisements)
