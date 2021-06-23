@@ -58,6 +58,13 @@ class ControlHandler:
         """
         await self._writeControlPacket(ControlPacketsGenerator.getAllowDimmingPacket(allow))
 
+    async def resetErrors(self, bitmask: int = 0xFFFFFFFF):
+        """
+        Resets errors.
+        @param bitmask: A 32b bitmask of the errors to reset.
+        """
+        await self._writeControlPacket(ControlPacketsGenerator.getResetErrorPacket(bitmask))
+
     async def disconnect(self):
         """
         Force the Crownstone to disconnect from you.
