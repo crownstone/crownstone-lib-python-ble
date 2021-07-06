@@ -46,6 +46,12 @@ class ControlHandler:
         """
         await self._writeControlPacket(ControlPacketsGenerator.getDimmerSwitchPacket(intensity))
 
+    async def putInDfuMode(self):
+        """
+        Puts the crownstone in DFU mode.
+        """
+        await self._writeControlPacket(ControlPacketsGenerator.getPutInDFUPacket())
+
     async def commandFactoryReset(self):
         """
           If you have the keys, you can use this to put the crownstone back into factory default mode
