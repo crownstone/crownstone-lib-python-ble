@@ -1,10 +1,9 @@
 from crownstone_core import Conversion
 from crownstone_core.protocol.BlePackets import ControlStateGetPacket, ControlStateSetPacket
 from crownstone_core.protocol.BluenetTypes import StateType
-from crownstone_ble import CrownstoneBle
 
 class DevHandler:
-    def __init__(self, bluetoothCore: CrownstoneBle):
+    def __init__(self, bluetoothCore):
         self.core = bluetoothCore
         
     async def setCurrentThresholdDimmer(self, currentAmp: float):

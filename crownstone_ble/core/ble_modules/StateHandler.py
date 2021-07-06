@@ -7,11 +7,9 @@ from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
 from crownstone_core.protocol.Services import CSServices
 from crownstone_core.protocol.SwitchState import SwitchState
 
-from crownstone_ble import CrownstoneBle
-
 
 class StateHandler:
-    def __init__(self, bluetoothCore: CrownstoneBle):
+    def __init__(self, bluetoothCore):
         self.core = bluetoothCore
         
     async def getSwitchState(self) -> SwitchState:
