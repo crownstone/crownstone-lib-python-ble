@@ -122,12 +122,20 @@ class BleHandler:
             raise CrownstoneBleException("Not connected.")
 
 
-    async def is_connected(self):
-        if self.activeClient is not None:
-            connected = await self.activeClient.client.is_connected()
-            if connected:
-                return True
-        return False
+    async def is_connected(self, address = None) -> bool:
+        """
+        Check if connected to a BLE device.
+        @param address: When not None, check if connected to given address.
+        @return: True when connected.
+        """
+        if self.activeClient is None:
+            return False
+        if address is not None:
+            if self.activeClient.address.lower() != address.lower():
+                return False
+        connected = await self.activeClient.client.is_connected()
+        if connected:
+            return True
 
 
     def resetClient(self):
