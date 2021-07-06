@@ -1,5 +1,6 @@
 from crownstone_core import Conversion
 from crownstone_core.Exceptions import CrownstoneError, CrownstoneException
+from crownstone_core.packets.CrownstoneErrors import CrownstoneErrors
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.protocol.BlePackets import ControlStateGetPacket, ControlStateSetPacket
 from crownstone_core.protocol.BluenetTypes import StateType, ResultValue
@@ -30,9 +31,30 @@ class StateHandler:
         # TODO: convert to uint8?
         return stateVal != 0
 
-    
-    
-    
+    async def getPowerUsage(self) -> float:
+        """
+        @return: Power usage in Watt.
+        """
+        stateVal = await self._getState(StateType.POWER_USAGE)
+        powerUsage = Conversion.uint8_array_to_int32(stateVal) / 1000.0
+        return powerUsage
+
+    async def getErrors(self) -> CrownstoneErrors:
+        """
+        @return: Errors
+        """
+        stateVal = await self._getState(StateType.ERROR_BITMASK)
+        return CrownstoneErrors(Conversion.uint8_array_to_uint32(stateVal))
+
+    async def getChipTemperature(self) -> float:
+        """
+        @return: Chip temperature in °C.
+        """
+        stateVal = await self._getState(StateType.TEMPERATURE)
+        return Conversion.uint8_to_int8(stateVal)
+
+
+
     """
     ---------------  UTIL  ---------------
     """
