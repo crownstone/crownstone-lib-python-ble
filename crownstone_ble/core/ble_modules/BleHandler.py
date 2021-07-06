@@ -218,6 +218,13 @@ class BleHandler:
     def abortScan(self):
         self.scanAborted = True
 
+    def hasService(self, serviceUUID) -> bool:
+        _LOGGER.debug(f"hasService serviceUUID={serviceUUID}")
+        return serviceUUID in self.activeClient.services
+
+    def hasCharacteristic(self, characteristicUUID) -> bool:
+        _LOGGER.debug(f"hasCharacteristic characteristicUUID={characteristicUUID}")
+        return characteristicUUID in self.activeClient.characteristics
 
     async def writeToCharacteristic(self, serviceUUID, characteristicUUID, content):
         _LOGGER.debug(f"writeToCharacteristic serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
