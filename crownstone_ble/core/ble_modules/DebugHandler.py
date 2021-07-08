@@ -77,12 +77,7 @@ class DebugHandler:
 
 	async def _writeControlPacket(self, packet):
 		""" Write the control packet. """
-		await self.core.ble.writeToCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control, packet)
+		await self.core.control._writeControlPacket(packet)
 
-	async def _writeControlAndGetResult(self, controlPacket):
-		""" Writes the control packet, and returns the result packet. """
-		result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._writeControlPacket(controlPacket))
-		resultPacket = ResultPacket(result)
-		if not resultPacket.valid:
-			raise CrownstoneException(CrownstoneError.INCORRECT_RESPONSE_LENGTH, "Result is invalid")
-		return resultPacket
+	async def _writeControlAndGetResult(self, controlPacket) -> ResultPacket:
+		return await self.core.control._writeControlPacketAndGetResult(controlPacket)

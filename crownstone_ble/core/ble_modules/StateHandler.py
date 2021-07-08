@@ -4,8 +4,6 @@ from crownstone_core.packets.CrownstoneErrors import CrownstoneErrors
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.protocol.BlePackets import ControlStateGetPacket, ControlStateSetPacket
 from crownstone_core.protocol.BluenetTypes import StateType, ResultValue
-from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
-from crownstone_core.protocol.Services import CSServices
 from crownstone_core.protocol.SwitchState import SwitchState
 
 
@@ -62,36 +60,21 @@ class StateHandler:
     
     async def _getState(self, stateType) -> list:
         """
+        Write get state command, and read result.
         :param stateType: StateType
         """
-        result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._requestState(stateType))
-
-        resultPacket = ResultPacket(result)
-        if not resultPacket.valid:
-            raise CrownstoneException(CrownstoneError.INCORRECT_RESPONSE_LENGTH, "Result is invalid")
+        resultPacket = await self.core.control._writeControlAndGetResult(ControlStateGetPacket(stateType).getPacket())
 
         # The payload of the resultPacket is padded with stateType and ID at the beginning
+        # TODO: write a packet for this.
         state = []
         for i in range(6, len(resultPacket.payload)):
             state.append(resultPacket.payload[i])
 
         return state
 
-
-    async def _requestState(self, stateType):
-        await self.core.ble.writeToCharacteristic(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Control,
-            ControlStateGetPacket(stateType).getPacket()
-        )
-
     async def _setState(self, packet: ControlStateSetPacket):
-        result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._setStateCommand(packet))
-        resultPacket = ResultPacket(result)
-        if not resultPacket.valid:
-            raise CrownstoneException(CrownstoneError.INCORRECT_RESPONSE_LENGTH, "Result is invalid")
-        if resultPacket.resultCode not in [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE]:
-            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"Result code is {resultPacket.resultCode}")
-
-    async def _setStateCommand(self, packet: ControlStateSetPacket):
-        await self.core.control._writeControlPacket(packet.getPacket())
+        """
+        Write set state command, and check result.
+        """
+        await self.core.control._writeControlAndGetResult(packet.getPacket())

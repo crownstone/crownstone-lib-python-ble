@@ -251,11 +251,36 @@ class ControlHandler:
 
 
     async def _readControlPacket(self, packet):
-        return await self.core.ble.readCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control)
+        if self.core.ble.hasCharacteristic(SetupCharacteristics.SetupControl):
+            return await self.core.ble.readCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl)
+        else:
+            return await self.core.ble.readCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control)
 
     async def _writeControlPacket(self, packet):
-        await self.core.ble.writeToCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control, packet)
+        if self.core.ble.hasCharacteristic(SetupCharacteristics.SetupControl):
+            await self.core.ble.writeToCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl, packet)
+        else:
+            await self.core.ble.writeToCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control, packet)
 
+
+    async def _writeControlAndGetResult(self, controlPacket, acceptedResultValues = [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE]) -> ResultPacket:
+        """
+        Writes the control packet, checks the result value, and returns the result packet.
+        @param controlPacket:          Serialized control packet to write.
+        @param acceptedResultValues:   List of result values that are ok.
+        @return:                       The result packet.
+        """
+        if self.core.ble.hasCharacteristic(SetupCharacteristics.Result):
+            result = await self.core.ble.setupSingleNotification(CSServices.SetupService, SetupCharacteristics.Result, lambda: self._writeControlPacket(controlPacket))
+        else:
+            result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._writeControlPacket(controlPacket))
+        resultPacket = ResultPacket(result)
+        if not resultPacket.valid:
+            raise CrownstoneException(CrownstoneError.INCORRECT_RESPONSE_LENGTH, "Result is invalid")
+        if resultPacket.resultCode not in acceptedResultValues:
+            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"Result code is {resultPacket.resultCode}")
+
+        return resultPacket
 
 def ProcessSessionNoncePacket(encryptedPacket, key, settings):
     # decrypt it

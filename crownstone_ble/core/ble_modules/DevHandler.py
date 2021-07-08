@@ -13,6 +13,5 @@ class DevHandler:
 
     async def getCurrentThresholdDimmer(self) -> float:
         rawState = await self.core.state._getState(StateType.CURRENT_CONSUMPTION_THRESHOLD_DIMMER)
-        packet = ControlStateSetPacket(StateType.CURRENT_CONSUMPTION_THRESHOLD_DIMMER)
         currentThresholdMilliAmp = Conversion.uint8_array_to_uint16(rawState)
         return currentThresholdMilliAmp / 1000.0
