@@ -188,6 +188,7 @@ class BleHandler:
                     await asyncio.sleep(0.1)
                     timer += 0.1
 
+                self.settings.exitSetup()
                 BleEventBus.unsubscribe(listenerId)
 
                 self.activeClient = None

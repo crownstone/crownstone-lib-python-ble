@@ -9,7 +9,7 @@ from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
 from crownstone_core.protocol.BlePackets import ControlPacket
 from crownstone_core.protocol.BluenetTypes import ProcessType, ControlType, ResultValue
-from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
+from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics, SetupCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
 from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
@@ -23,10 +23,16 @@ class ControlHandler:
         self.core = bluetoothCore
 
     async def getAndSetSessionNone(self):
-        # TODO: move this function to BleHandler.
         # read the nonce
-        rawNonce = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.CrownstoneService, CrownstoneCharacteristics.SessionData)
-        ProcessSessionNoncePacket(rawNonce, self.core.settings.basicKey, self.core.settings)
+        if self.core.ble.hasCharacteristic(CrownstoneCharacteristics.SessionData):
+            rawNonce = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.CrownstoneService, CrownstoneCharacteristics.SessionData)
+            ProcessSessionNoncePacket(rawNonce, self.core.settings.basicKey, self.core.settings)
+        elif self.core.ble.hasCharacteristic(SetupCharacteristics.SessionData):
+            sessionKey = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionKey)
+            sessionNoncePacket = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.SetupService, SetupCharacteristics.SessionData)
+
+            self.core.settings.loadSetupKey(sessionKey) # This also sets user level to "setup", make sure you "exitSetup()" on disconnect!
+            ProcessSessionNoncePacket(sessionNoncePacket, sessionKey, self.core.settings)
 
     async def setSwitch(self, switchVal: int):
         """

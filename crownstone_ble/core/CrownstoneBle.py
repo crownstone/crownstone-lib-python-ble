@@ -43,6 +43,9 @@ class CrownstoneBle:
         self.settings.loadKeys("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
     async def shutDown(self):
+        """
+        Shut down the library nicely.
+        """
         await self.ble.shutDown()
     
     def setSettings(self, adminKey, memberKey, basicKey, serviceDataKey, localizationKey, meshApplicationKey, meshNetworkKey):
@@ -94,6 +97,7 @@ class CrownstoneBle:
         await self.setup.setup(address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
 
     async def disconnect(self):
+        self.settings.exitSetup()
         await self.ble.disconnect()
     
     async def startScanning(self, scanDuration=3):
