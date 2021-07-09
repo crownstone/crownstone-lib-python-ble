@@ -142,14 +142,7 @@ class ControlHandler:
 
 
     async def getMicroappInfo(self) -> MicroappInfoPacket:
-        controlPacket = ControlPacket(ControlType.MICROAPP_GET_INFO).getPacket()
-        result = await self.core.ble.setupSingleNotification(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Result,
-            lambda: self._writeControlPacket(controlPacket)
-        )
-        _LOGGER.info(f"getMicroappInfo {result}")
-        resultPacket = ResultPacket(result)
+        resultPacket = await self._writeControlAndGetResult(ControlPacket(ControlType.MICROAPP_GET_INFO).getPacket())
         _LOGGER.info(f"getMicroappInfo {resultPacket}")
         infoPacket = MicroappInfoPacket(resultPacket.payload)
         return infoPacket
@@ -169,84 +162,24 @@ class ControlHandler:
         header = MicroappHeaderPacket(appIndex=index)
         packet = MicroappUploadPacket(header, offset, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.toBuffer()).getPacket()
-
-        def handleResult(notificationData):
-            result = ResultPacket(notificationData)
-            if result.valid:
-                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
-                    _LOGGER.info("Waiting for data to be stored on Crownstone.")
-                    return ProcessType.CONTINUE
-                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
-                    _LOGGER.info("Data stored.")
-                    return ProcessType.FINISHED
-                else:
-                    _LOGGER.warning(f"Failed: {result.resultCode}")
-                    return ProcessType.ABORT_ERROR
-            else:
-                _LOGGER.warning("Invalid result.")
-                return ProcessType.ABORT_ERROR
-
-        await self.core.ble.setupNotificationStream(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Result,
-            lambda: self._writeControlPacket(controlPacket),
-            lambda notification: handleResult(notification),
-            5
-        )
+        await self._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"uploaded chunk offset={offset}")
         # TODO: return the final result?
 
     async def validateMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.toBuffer()).getPacket()
-        result = await self.core.ble.setupSingleNotification(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Result,
-            lambda: self._writeControlPacket(controlPacket)
-        )
-        resultPacket = ResultPacket(result)
-        if resultPacket.resultCode != ResultValue.SUCCESS:
-            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
+        await self._writeControlAndGetResult(controlPacket)
 
     async def enableMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.toBuffer()).getPacket()
-        result = await self.core.ble.setupSingleNotification(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Result,
-            lambda: self._writeControlPacket(controlPacket)
-        )
-        resultPacket = ResultPacket(result)
-        if resultPacket.resultCode != ResultValue.SUCCESS:
-            raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"result={resultPacket.resultCode}")
+        await self._writeControlAndGetResult(controlPacket)
 
     async def removeMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.toBuffer()).getPacket()
-
-        def handleResult(notificationData):
-            result = ResultPacket(notificationData)
-            if result.valid:
-                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
-                    _LOGGER.info("Waiting for data to be erased on Crownstone.")
-                    return ProcessType.CONTINUE
-                elif result.resultCode == ResultValue.SUCCESS or result.resultCode == ResultValue.SUCCESS_NO_CHANGE:
-                    _LOGGER.info("Data erased.")
-                    return ProcessType.FINISHED
-                else:
-                    _LOGGER.warning(f"Failed: {result.resultCode}")
-                    return ProcessType.ABORT_ERROR
-            else:
-                _LOGGER.warning("Invalid result.")
-                return ProcessType.ABORT_ERROR
-
-        await self.core.ble.setupNotificationStream(
-            CSServices.CrownstoneService,
-            CrownstoneCharacteristics.Result,
-            lambda: self._writeControlPacket(controlPacket),
-            lambda notification: handleResult(notification),
-            5
-        )
+        await self._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"Removed app {index}")
 
     """
@@ -287,6 +220,45 @@ class ControlHandler:
             raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, f"Result code is {resultPacket.resultCode}")
 
         return resultPacket
+
+    async def _writeControlAndWaitForSuccess(self, controlPacket, timeout = 5, acceptedResultValues = [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE]):
+        """
+        Writes the control packet, checks the result value, and returns the result packet.
+        @param controlPacket:          Serialized control packet to write.
+        @param timeout:                Timeout in seconds.
+        @param acceptedResultValues:   List of result values that are considered a success.
+        @return:                       The result packet.
+        """
+        def handleResult(notificationData):
+            result = ResultPacket(notificationData)
+            if result.valid:
+                if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
+                    _LOGGER.debug("Waiting for success.")
+                    return ProcessType.CONTINUE
+                elif result.resultCode in acceptedResultValues:
+                    _LOGGER.debug("Success.")
+                    return ProcessType.FINISHED
+                else:
+                    _LOGGER.warning(f"Result code: {result.resultCode}")
+                    return ProcessType.ABORT_ERROR
+            else:
+                _LOGGER.warning("Invalid result packet.")
+                return ProcessType.ABORT_ERROR
+
+        if self.core.ble.hasCharacteristic(SetupCharacteristics.Result):
+            service = CSServices.SetupService
+            resultCharacteristic = SetupCharacteristics.Result
+        else:
+            service = CSServices.CrownstoneService
+            resultCharacteristic = CrownstoneCharacteristics.Result
+
+        await self.core.ble.setupNotificationStream(
+            service,
+            resultCharacteristic,
+            lambda: self._writeControlPacket(controlPacket),
+            lambda notification: handleResult(notification),
+            timeout
+        )
 
 def ProcessSessionNoncePacket(encryptedPacket, key, settings):
     # decrypt it
