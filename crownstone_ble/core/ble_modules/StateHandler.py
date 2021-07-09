@@ -29,6 +29,11 @@ class StateHandler:
         # TODO: convert to uint8?
         return stateVal != 0
 
+    async def getSwitchLocked(self) -> bool:
+        stateVal = await self._getState(StateType.SWITCH_LOCKED)
+        # TODO: convert to uint8?
+        return stateVal != 0
+
     async def getPowerUsage(self) -> float:
         """
         @return: Power usage in Watt.
