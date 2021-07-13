@@ -13,26 +13,26 @@ class StateHandler:
         
     async def getSwitchState(self) -> SwitchState:
         # TODO: check result code
-        rawSwitchState = await self._getState(StateType.SWITCH_STATE)
-        return SwitchState(rawSwitchState[0])
+        stateVal = await self._getState(StateType.SWITCH_STATE)
+        return SwitchState(stateVal[0])
 
     async def getTime(self) -> int:
         """
         @return: posix timestamp (uint32)
         """
         # TODO: check result code
-        bytesResult = await self._getState(StateType.TIME)
-        return Conversion.uint8_array_to_uint32(bytesResult)
+        stateVal = await self._getState(StateType.TIME)
+        return Conversion.uint8_array_to_uint32(stateVal)
 
     async def getDimmingAllowed(self) -> bool:
         stateVal = await self._getState(StateType.PWM_ALLOWED)
         # TODO: convert to uint8?
-        return stateVal != 0
+        return stateVal[0] != 0
 
     async def getSwitchLocked(self) -> bool:
         stateVal = await self._getState(StateType.SWITCH_LOCKED)
         # TODO: convert to uint8?
-        return stateVal != 0
+        return stateVal[0] != 0
 
     async def getPowerUsage(self) -> float:
         """
@@ -54,7 +54,7 @@ class StateHandler:
         @return: Chip temperature in °C.
         """
         stateVal = await self._getState(StateType.TEMPERATURE)
-        return Conversion.uint8_to_int8(stateVal)
+        return Conversion.uint8_to_int8(stateVal[0])
 
 
 
