@@ -38,44 +38,44 @@ class ControlHandler:
         """
         :param switchVal: 0% .. 100% or special value (SwitchValSpecial).
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getSwitchCommandPacket(switchVal))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getSwitchCommandPacket(switchVal))
 
     async def setRelay(self, turnOn: bool):
         """
         :param turnOn: True to turn relay on.
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getRelaySwitchPacket(turnOn))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getRelaySwitchPacket(turnOn))
 
     async def setDimmer(self, intensity: int):
         """
          :param intensity: percentage [0..100]
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getDimmerSwitchPacket(intensity))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getDimmerSwitchPacket(intensity))
 
     async def putInDfuMode(self):
         """
         Puts the crownstone in DFU mode.
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getPutInDFUPacket())
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getPutInDFUPacket())
 
     async def commandFactoryReset(self):
         """
           If you have the keys, you can use this to put the crownstone back into factory default mode
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getCommandFactoryResetPacket())
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getCommandFactoryResetPacket())
 
     async def allowDimming(self, allow: bool):
         """
         :param allow: True to allow dimming
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getAllowDimmingPacket(allow))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getAllowDimmingPacket(allow))
 
     async def resetErrors(self, bitmask: int = 0xFFFFFFFF):
         """
         Resets errors.
         @param bitmask: A 32b bitmask of the errors to reset.
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getResetErrorPacket(bitmask))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getResetErrorPacket(bitmask))
 
     async def disconnect(self):
         """
@@ -83,7 +83,7 @@ class ControlHandler:
         """
         try:
             #print("Send disconnect command")
-            await self._writeControlPacket(ControlPacketsGenerator.getDisconnectPacket())
+            await self._writeControlAndGetResult(ControlPacketsGenerator.getDisconnectPacket())
         except Exception as err:
             # TODO: catch this error if it is something like already disconnected
             #print("Unknown error")
@@ -102,11 +102,11 @@ class ControlHandler:
         """
         :param lock: bool
         """
-        await self._writeControlPacket(ControlPacketsGenerator.getLockSwitchPacket(lock))
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getLockSwitchPacket(lock))
 
 
     async def reset(self):
-        await self._writeControlPacket(ControlPacketsGenerator.getResetPacket())
+        await self._writeControlAndGetResult(ControlPacketsGenerator.getResetPacket())
 
 
 
