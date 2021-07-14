@@ -203,6 +203,7 @@ class BleHandler:
 
 
     async def startScanning(self):
+        _LOGGER.debug(f"startScanning scanningActive={self.scanningActive}")
         if not self.scanningActive:
             self.scanAborted = False
             self.scanningActive = True
@@ -210,6 +211,7 @@ class BleHandler:
 
 
     async def stopScanning(self):
+        _LOGGER.debug(f"stopScanning scanningActive={self.scanningActive}")
         if self.scanningActive:
             self.scanningActive = False
             self.scanAborted = False
@@ -217,6 +219,7 @@ class BleHandler:
 
 
     def abortScan(self):
+        _LOGGER.debug("abortScan")
         self.scanAborted = True
 
     def hasService(self, serviceUUID) -> bool:
