@@ -82,12 +82,11 @@ class CrownstoneBle:
         await self.ble.connect(address)
         if not ignoreEncryption:
             try:
-                await self.control.getAndSetSessionNone()
+                await self.control._getAndSetSessionNonce()
             except CrownstoneBleException as err:
                 # the only relevant error here is this one. If it is any other, the Crownstone is in the wrong mode
                 if err.type is BleError.COULD_NOT_VALIDATE_SESSION_NONCE:
                     raise err
-
 
     async def setupCrownstone(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         if not self.defaultKeysOverridden:

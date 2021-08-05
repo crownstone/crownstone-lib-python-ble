@@ -41,7 +41,7 @@ class SetupHandler:
             3
         )
 
-        _LOGGER.info("Closing Setup V2.")
+        _LOGGER.info("Closing setup.")
         self.core.settings.exitSetup()
 
 

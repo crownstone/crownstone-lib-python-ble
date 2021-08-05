@@ -125,8 +125,8 @@ class BleHandler:
     async def is_connected(self, address = None) -> bool:
         """
         Check if connected to a BLE device.
-        @param address: When not None, check if connected to given address.
-        @return: True when connected.
+        :param address: When not None, check if connected to given address.
+        :returns:       True when connected.
         """
         if self.activeClient is None:
             return False
@@ -195,6 +195,7 @@ class BleHandler:
 
 
     async def scan(self, duration=3):
+        _LOGGER.debug(f"scan duration={duration}")
         await self.startScanning()
         while duration > 0 and self.scanAborted == False:
             await asyncio.sleep(0.1)

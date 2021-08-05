@@ -47,11 +47,6 @@ On other platforms you can't currently define which bleAdapter to use.
 
 <br/>
 
-### `async isCrownstoneInSetupMode(address: string, scanDuration=3)`
-This will scan (blocking) for scanDuration. After which it will return True or False, depending if the Crownstone with this address (like "f7:19:a4:ef:ea:f6") is in setup mode or not.
-
-<br/>
-
 ### `async def getMode(self, address, scanDuration=3) -> CrownstoneOperationMode`
 This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
 We will return once we know.
