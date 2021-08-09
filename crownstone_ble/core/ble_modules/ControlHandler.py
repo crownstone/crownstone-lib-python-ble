@@ -187,24 +187,24 @@ class ControlHandler:
         _LOGGER.info(f"Upload microapp chunk index={index} offset={offset} size={len(data)}")
         header = MicroappHeaderPacket(appIndex=index)
         packet = MicroappUploadPacket(header, offset, data)
-        controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.toBuffer()).getPacket()
+        controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.serialize()).getPacket()
         await self._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"uploaded chunk offset={offset}")
         # TODO: return the final result?
 
     async def validateMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
-        controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.toBuffer()).getPacket()
+        controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.serialize()).getPacket()
         await self._writeControlAndGetResult(controlPacket)
 
     async def enableMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
-        controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.toBuffer()).getPacket()
+        controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.serialize()).getPacket()
         await self._writeControlAndGetResult(controlPacket)
 
     async def removeMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
-        controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.toBuffer()).getPacket()
+        controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.serialize()).getPacket()
         await self._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"Removed app {index}")
 
