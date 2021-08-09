@@ -69,7 +69,7 @@ class StateHandler:
         Write get state command, and read result.
         :param stateType: StateType
         """
-        resultPacket = await self.core.control._writeControlAndGetResult(ControlStateGetPacket(stateType).getPacket())
+        resultPacket = await self.core.control._writeControlAndGetResult(ControlStateGetPacket(stateType).serialize())
 
         # The payload of the resultPacket is padded with stateType and ID at the beginning
         # TODO: write a packet for this.
@@ -83,4 +83,4 @@ class StateHandler:
         """
         Write set state command, and check result.
         """
-        await self.core.control._writeControlAndGetResult(packet.getPacket())
+        await self.core.control._writeControlAndGetResult(packet.serialize())

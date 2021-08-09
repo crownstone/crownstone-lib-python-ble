@@ -18,7 +18,7 @@ class DebugHandler:
 
 	async def getUptime(self):
 		""" Get the uptime of the crownstone in seconds. """
-		controlPacket = ControlPacket(ControlType.GET_UPTIME).getPacket()
+		controlPacket = ControlPacket(ControlType.GET_UPTIME).serialize()
 		result = await self._writeControlAndGetResult(controlPacket)
 		if result.resultCode != ResultValue.SUCCESS:
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
@@ -26,7 +26,7 @@ class DebugHandler:
 
 	async def getAdcRestarts(self):
 		"""	Get number of ADC restarts since boot. Returns an AdcRestartsPacket. """
-		controlPacket = ControlPacket(ControlType.GET_ADC_RESTARTS).getPacket()
+		controlPacket = ControlPacket(ControlType.GET_ADC_RESTARTS).serialize()
 		result = await self._writeControlAndGetResult(controlPacket)
 		if result.resultCode != ResultValue.SUCCESS:
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
@@ -34,7 +34,7 @@ class DebugHandler:
 
 	async def getAdcChannelSwaps(self):
 		""" Get number of ADC channel swaps since boot. Returns an AdcChannelSwapsPacket. """
-		controlPacket = ControlPacket(ControlType.GET_ADC_CHANNEL_SWAPS).getPacket()
+		controlPacket = ControlPacket(ControlType.GET_ADC_CHANNEL_SWAPS).serialize()
 		result = await self._writeControlAndGetResult(controlPacket)
 		if result.resultCode != ResultValue.SUCCESS:
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
@@ -42,7 +42,7 @@ class DebugHandler:
 
 	async def getSwitchHistory(self):
 		""" Get the switch history. Returns a SwitchHistoryListPacket. """
-		controlPacket = ControlPacket(ControlType.GET_SWITCH_HISTORY).getPacket()
+		controlPacket = ControlPacket(ControlType.GET_SWITCH_HISTORY).serialize()
 		result = await self._writeControlAndGetResult(controlPacket)
 		if result.resultCode != ResultValue.SUCCESS:
 			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
