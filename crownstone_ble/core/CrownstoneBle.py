@@ -25,7 +25,7 @@ from crownstone_ble.core.modules.RssiChecker import RssiChecker
 _LOGGER = logging.getLogger(__name__)
 
 class CrownstoneBle:
-    __version__ = "x.x.x--UNRELEASED"
+    __version__ = "2.0.0-git"
     
     def __init__(self, bleAdapterAddress: str = None):
         # bleAdapterAddress is the MAC address of the adapter you want to use.
