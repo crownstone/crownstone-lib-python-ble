@@ -32,12 +32,10 @@ async def switch_crownstone():
 
     await core.shutDown()
 
-# this is where we actually start running the example
+# This is where we actually start running the example.
 # Python does not allow us to run async functions like they're normal functions.
-# Since we support Python3.6 as a minimum we can't use asyncio.run (introduced in 3.7)
 try:
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(switch_crownstone())
+    asyncio.run(switch_crownstone())
 except KeyboardInterrupt:
     # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
     print("Closing the procedure.")
@@ -47,8 +45,9 @@ except KeyboardInterrupt:
 
 ### Imports
 
-These are the modules that we use in this example. 
+These are the modules that we use in this example.
 Asyncio provides the API for using async/await methods. Finally, we import the CrownstoneBle lib in order to use it.
+
 ```python
 import asyncio
 from crownstone_ble import CrownstoneBle
@@ -57,6 +56,7 @@ from crownstone_ble import CrownstoneBle
 ### Initialization
 This creates an instance of the library and loads your sphere's keys into it. In this case we choose a specific bleAdapterAddress to execute this example.
 This bleAdapterAddress is only used on Linux systems.
+
 ```python
 core = CrownstoneBle(bleAdapterAddress='00:00:13:42:AB:FF')
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
@@ -65,6 +65,7 @@ core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "My
 ### Async wrapper
 Since the entire library used async methods for all asynchronous processes, we need to wrap the actual usage inside an async function.
 This is how Python does this. If you don't know how it works, look it up online. 
+
 ```python
 async def switch_crownstone():
     ...
@@ -72,13 +73,13 @@ async def switch_crownstone():
 
 ### Switching the Crownstone
 The Crownstone BLE lib will only interact with Crownstones via Bluetooth connections. You may notice that your smartphone switches your Crownstones much quicker.
-This secure broadcast mechanism currently not implemented in this library. If you want to build an integration, like a hub, which should quickly switch the Crownstones, 
-we'd like to recommend the UART library combined with the Crownstone USB dongle.
+This secure broadcast mechanism currently not implemented in this library. If you want to build an integration, like a hub, which should quickly switch the Crownstones, we'd like to recommend the UART library combined with the Crownstone USB dongle.
 
 This part of the example will connect to an imaginary MAC address, switch it off, wait, back on, disconnect and shutdown. Unfortunately, the macOS version of the library will not be able to use
-MAC addresses. [More information here.](https://github.com/hbldh/bleak/issues/284) 
+MAC addresses. [More information here.](https://github.com/hbldh/bleak/issues/284)
 
 In order to find which handle corresponds with which Crownstone, you can first scan for Crownstones, find their Crownstone ID and use that to correlate them.
+
 ```python
 await core.connect('AA:BB:CC:DD:EE:FF')
 await core.control.setSwitch(0)
@@ -90,11 +91,10 @@ await core.shutDown()
 
 ### Running async code
 We wrap this part in a try-except in order to catch the SIGINT interrupts (like control+c on linux) and close the example without large errors.
-`If we use asyncio.run, this will not work reliably.`
+
 ```python
 try:
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(switch_crownstone())
+    asyncio.run(switch_crownstone())
 except KeyboardInterrupt:
     # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
     print("Closing the procedure.")
