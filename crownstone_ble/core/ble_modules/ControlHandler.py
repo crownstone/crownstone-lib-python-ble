@@ -97,20 +97,16 @@ class ControlHandler:
         Make the Crownstone to disconnect from you.
         """
         try:
-            #print("Send disconnect command")
-            await self._writeControlAndGetResult(ControlPacketsGenerator.getDisconnectPacket())
-        except Exception as err:
-            # TODO: catch this error if it is something like already disconnected
-            #print("Unknown error")
-            raise err
+            # Only wait for a short time, because we don't expect a result packet.
+            await self._writeControlAndGetResult(ControlPacketsGenerator.getDisconnectPacket(), [ResultValue.SUCCESS], 1)
+        except CrownstoneBleException as err:
+            if err.type == BleError.NO_NOTIFICATION_DATA_RECEIVED:
+                _LOGGER.info(f"Ignoring expected error: {err}")
+            else:
+                raise err
 
-        try:
-            # Disconnect from this side as well.
-            #print("Disconnect from this side as well")
-            self.core.ble.disconnect()
-        except Exception as err:
-            #print("Unknown error")
-            raise err
+        # Disconnect from this side as well.
+        self.core.ble.disconnect()
 
 
     async def lockSwitch(self, lock: bool):
@@ -302,7 +298,7 @@ class ControlHandler:
             await self.core.ble.writeToCharacteristic(CSServices.CrownstoneService, CrownstoneCharacteristics.Control, packet)
 
 
-    async def _writeControlAndGetResult(self, controlPacket, acceptedResultValues = [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE]) -> ResultPacket:
+    async def _writeControlAndGetResult(self, controlPacket, acceptedResultValues = [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE], timeout = None) -> ResultPacket:
         """
         Writes the control packet, checks the result value, and returns the result packet.
         :param controlPacket:          Serialized control packet to write.
@@ -310,9 +306,9 @@ class ControlHandler:
         :returns:                      The result packet.
         """
         if self.core.ble.hasCharacteristic(SetupCharacteristics.Result):
-            result = await self.core.ble.setupSingleNotification(CSServices.SetupService, SetupCharacteristics.Result, lambda: self._writeControlPacket(controlPacket))
+            result = await self.core.ble.setupSingleNotification(CSServices.SetupService, SetupCharacteristics.Result, lambda: self._writeControlPacket(controlPacket), timeout)
         else:
-            result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._writeControlPacket(controlPacket))
+            result = await self.core.ble.setupSingleNotification(CSServices.CrownstoneService, CrownstoneCharacteristics.Result, lambda: self._writeControlPacket(controlPacket), timeout)
         resultPacket = ResultPacket(result)
         if not resultPacket.valid:
             raise CrownstoneException(CrownstoneError.INCORRECT_RESPONSE_LENGTH, "Result is invalid")

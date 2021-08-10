@@ -259,7 +259,10 @@ class BleHandler:
         return await self.activeClient.client.read_gatt_char(characteristicUUID)
 
 
-    async def setupSingleNotification(self, serviceUUID, characteristicUUID, writeCommand):
+    async def setupSingleNotification(self, serviceUUID, characteristicUUID, writeCommand, timeout = None):
+        if timeout is None:
+            timeout = 12.5
+
         _LOGGER.debug(f"setupSingleNotification serviceUUID={serviceUUID} characteristicUUID={characteristicUUID}")
         await self.is_connected_guard()
 
@@ -276,16 +279,18 @@ class BleHandler:
         self.notificationLoopActive = True
         loopCount = 0
         polInterval = 0.1
-        while self.notificationLoopActive and loopCount < (12.5 / polInterval):
+        while self.notificationLoopActive and loopCount < (timeout / polInterval):
             await asyncio.sleep(polInterval)
             loopCount += 1
 
 
         if notificationDelegate.result is None:
-            self.activeClient.unsubscribeNotifications(characteristicUUID)
+            if self.activeClient is not None:
+                self.activeClient.unsubscribeNotifications(characteristicUUID)
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
 
-        self.activeClient.unsubscribeNotifications(characteristicUUID)
+        if self.activeClient is not None:
+            self.activeClient.unsubscribeNotifications(characteristicUUID)
         return notificationDelegate.result
 
 
