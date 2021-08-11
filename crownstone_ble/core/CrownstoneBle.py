@@ -40,7 +40,13 @@ class CrownstoneBle:
         self.defaultKeysOverridden = False
 
         # load default keys so the lib won't crash if you don't use keys.
-        self.settings.loadKeys("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
+        self.settings.loadKeys("adminKeyForCrown",
+                               "memberKeyForHome",
+                               "basicKeyForOther",
+                               "MyServiceDataKey",
+                               "aLocalizationKey",
+                               "MyGoodMeshAppKey",
+                               "MyGoodMeshNetKey")
 
     async def shutDown(self):
         """
@@ -54,11 +60,11 @@ class CrownstoneBle:
 
     def loadSettingsFromDictionary(self, data):
         if "admin" not in data:
-            raise CrownstoneBleException(CrownstoneError.ADMIN_KEY_REQURED)
+            raise CrownstoneBleException(CrownstoneError.ADMIN_KEY_REQUIRED)
         if "member" not in data:
             raise CrownstoneBleException(CrownstoneError.MEMBER_KEY_REQUIRED)
         if "basic" not in data:
-            raise CrownstoneBleException(CrownstoneError.BASIC_KEY_REQURED)
+            raise CrownstoneBleException(CrownstoneError.BASIC_KEY_REQUIRED)
         if "serviceDataKey" not in data:
             raise CrownstoneBleException(CrownstoneError.SERVICE_DATA_KEY_REQUIRED)
         if "localizationKey" not in data:
@@ -81,17 +87,13 @@ class CrownstoneBle:
         # TODO: let available services determine whether or not to use encryption.
         await self.ble.connect(address)
         if not ignoreEncryption:
-            try:
-                await self.control._getAndSetSessionNonce()
-            except CrownstoneBleException as err:
-                # the only relevant error here is this one. If it is any other, the Crownstone is in the wrong mode
-                if err.type is BleError.COULD_NOT_VALIDATE_SESSION_NONCE:
-                    raise err
+            await self.control._getAndSetSessionNonce()
 
     async def setupCrownstone(self, address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor):
         if not self.defaultKeysOverridden:
             raise CrownstoneBleException(BleError.NO_ENCRYPTION_KEYS_SET,
-                                         "Keys are not initialized so I can't put anything on the Crownstone. Make sure you call .setSettings, loadSettingsFromFile or loadSettingsFromDictionary")
+                                         "Keys are not initialized so I can't put anything on the Crownstone. "
+                                         "Make sure you call .setSettings, loadSettingsFromFile or loadSettingsFromDictionary")
 
         await self.setup.setup(address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
 
@@ -243,7 +245,8 @@ class CrownstoneBle:
                     if "address" in data:
                         addressesToExcludeSet.add(data["address"].lower())
                     else:
-                        raise CrownstoneException(CrownstoneError.INVALID_ADDRESS, "Addresses to Exclude is either an array of addresses (like 'f7:19:a4:ef:ea:f6') or an array of dicts with the field 'address'")
+                        raise CrownstoneException(CrownstoneError.INVALID_ADDRESS,
+                                                  "Addresses to Exclude is either an array of addresses (like 'f7:19:a4:ef:ea:f6') or an array of dicts with the field 'address'")
                 else:
                     addressesToExcludeSet.add(data.lower())
 
