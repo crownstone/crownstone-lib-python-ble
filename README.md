@@ -13,7 +13,7 @@ If you want to use python virtual environments, take a look at the [README_VENV]
 
 We use `pip3` in the example below because pip is usually the python 2 client. If you're using virtual environments, it could be that pip3 does not exist there. In that case, use pip.
 ```
-pip3 install crownstone_ble
+pip3 install crownstone-ble
 ```
 
 # Async functions
@@ -34,49 +34,45 @@ ble = CrownstoneBle(bleAdapterAddress="00:32:FA:DE:15:02")
 CrownstoneBle is composed of a number of top level methods and modules for specific commands. We will first describe these top level methods.
 
 ### `__init__(bleAdapterAddress=None)`
- When initializing the CrownstoneBle class, you can provide an bleAdapterAddress if you're on linux. You can get these addressed by running:
- ```
- hcitool dev
- ```
- These addresses are in the "00:32:FA:DE:15:02" format.
- The constructor is not explicitly called with __init__, but like this:
+When initializing the CrownstoneBle class, you can provide an bleAdapterAddress if you're on linux. You can get these addressed by running:
+```
+hcitool dev
+```
+These addresses are in the "00:32:FA:DE:15:02" format.
+The constructor is not explicitly called with __init__, but like this:
 ```python
 ble = CrownstoneBle(bleAdapterAddress="00:32:FA:DE:15:02")
 ```
-On other platforms you can't currently define which bleAdapter to use.
+On other platforms you can't define which bleAdapter to use.
 
-<br/>
 
 ### `async def getMode(self, address, scanDuration=3) -> CrownstoneOperationMode`
 This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
 We will return once we know.
 
-It can throw the following CrownstoneBleException
-- BleError.NO_SCANS_RECEIVED
-    We have not received any scans from this Crownstone, and can't say anything about it's state.
-<br/>
+It can raise a CrownstoneBleException with the following types:
+- `BleError.NO_SCANS_RECEIVED` We have not received any scans from this Crownstone, and can't say anything about it's state.
+
 
 ### `async def waitForMode(self, address, requiredMode: CrownstoneOperationMode, scanDuration=3) -> CrownstoneOperationMode`
 This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode. We will
 scan for the scanDuration amount of seconds or until the Crownstone is in the required mode.
 
-It can throw the following CrownstoneBleException
-- BleError.NO_SCANS_RECEIVED
+It can raise a CrownstoneBleException with the following types:
+- `BleError.NO_SCANS_RECEIVED`
     We have not received any scans from this Crownstone, and can't say anything about it's state.
-- BleError.DIFFERENT_MODE_THAN_REQUIRED
-    During the {scanDuration} seconds of scanning, the Crownstone was not in the required mode.
-<br/>
+- `BleError.DIFFERENT_MODE_THAN_REQUIRED`
+    During the `scanDuration` seconds of scanning, the Crownstone was not in the required mode.
+
 
 ### `async shutDown()`
 Shut down the BLE module. This is should be done on closing your script.
 
-<br/>
 
 ### `setSettings(adminKey: string, memberKey: string, basicKey: string, serviceDataKey: string, localizationKey: string, meshApplicationKey: string, meshNetworkKey: string, referenceId="PythonLib")`
 The Crownstone uses encryption by default. There are 3 keys used. You can find more information on that in the [protocol](https://github.com/crownstone/bluenet/blob/master/docs/PROTOCOL.md).
 These keys are 16 characters long like "adminKeyForCrown" or 32 characters as a hex string like "9332b7abf19b86ff48156d88c687def6". The referenceId is optional. If you know what you're doing, you can disable the encryption but it should never be required.
 
-<br/>
 
 ### `loadSettingsFromFile(path: string)`
 As an alternative to using setSettings, you can load it from a json file. The path is relative to the script being executed. An example of this json file is:
@@ -92,29 +88,25 @@ As an alternative to using setSettings, you can load it from a json file. The pa
 }
 ```
 
-<br/>
 
 ### `async connect(address: string)`
 This will connect to the Crownstone with the provided MAC address. You get get this address by scanning or getting the nearest Crownstone. More on this below.
 
-<br/>
 
 ### `async setupCrownstone(address: string, sphereId: int, crownstoneId: int, meshDeviceKey: string, ibeaconUUID: string, ibeaconMajor: uint16, ibeaconMinor: uint16)`
 New Crownstones are in setup mode. In this mode they are open to receiving encryption keys. This method facilitates this process. No manual connection is required.
 - address is the MAC address.
-- sphereId is a uint8 id for this Crownstone's sphere (Required for FW 3.0.0+)
-- crownstoneId is a uint8 id for this Crownstone
-- meshDeviceKey is a 16 character string (Required for FW 3.0.0+)
-- ibeaconUUID is a string like "d8b094e7-569c-4bc6-8637-e11ce4221c18"
-- ibeaconMajor is a number between 0 and 65535
-- ibeaconMinor is a number between 0 and 65535
+- sphereId is a uint8 id for this Crownstone's sphere.
+- crownstoneId is a uint8 id for this Crownstone.
+- meshDeviceKey is a 16 character string.
+- ibeaconUUID is a string like "d8b094e7-569c-4bc6-8637-e11ce4221c18".
+- ibeaconMajor is a number between 0 and 65535.
+- ibeaconMinor is a number between 0 and 65535.
 
-<br/>
 
 ### `async disconnect()`
 This will disconnect from the connected Crownstone.
 
-<br/>
 
 ### `async getCrownstonesByScanning(scanDuration=3)`
 This will scan for scanDuration in seconds and return an array of the Crownstone it has found. This is an array of dictionaries that look like this:
@@ -128,19 +120,19 @@ This will scan for scanDuration in seconds and return an array of the Crownstone
 ```
 This array can be directly put in the 'addressesToExclude' field of the 'getNearest..' methods.
 
-<br/>
+
 
 ### `async startScanning(scanDuration=3)`
-This will start scanning for Crownstones in a background thread. The scanDuration denotes how long we will scan for.
-Once scanning is active, BleTopics.advertisement events will be triggered with the advertisements of the
+This will start scanning for Crownstones in a background thread. The `scanDuration` denotes how long we will scan for.
+Once scanning is active, `BleTopics.advertisement` events will be triggered with the advertisements of the
 Crownstones that share our encryption keys or are in setup mode.
 
-<br/>
+
 
 ### `async stopScanning()`
 This will stop an active scan.
 
-<br/>
+
 
 ### `async getNearestCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 This will search for the nearest Crownstone. It will return ANY Crownstone, not just the ones sharing our encryption keys.
@@ -151,17 +143,18 @@ This will search for the nearest Crownstone. It will return ANY Crownstone, not 
 
 If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
 
-<br/>
+
 
 ### `async getNearestValidatedCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 Same as getNearestCrownstone but will only search for Crownstones with the same encryption keys.
 If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
 
-<br/>
+
 
 ### `async getNearestSetupCrownstone(rssiAtLeast=-100, scanDuration=3, returnFirstAcceptable=False, addressesToExclude=[]) -> ScanData or None`
 Same as getNearestCrownstone but will only search for Crownstones in setup mode.
 If anything was found, the ScanData will be returned. [This datatype is defined here.](#ScanData)
+
 
 
 # Control Module
@@ -188,24 +181,24 @@ loop.run_until_complete(example())
 Methods:
 
 ### `async setSwitch(switchVal: int)`
-You can switch the Crownstone. 0 for off, 100 for on, between 0 and 100 to dim. There are also special values to be found in SwitchValSpecial. If you want to dim, make sure dimming is enabled. You can enable this using the allowDimming method.
+You can switch the Crownstone. 0 for off, 100 for on, between 0 and 100 to dim. There are also special values to be found in `SwitchValSpecial`. If you want to dim, make sure dimming is enabled. You can enable this using the `allowDimming()` method.
+
 ### `async commandFactoryReset()`
 Assuming you have the encryption keys, you can use this method to put the Crownstone back into setup mode.
+
 ### `async allowDimming(allow: bool)`
-Enable or disable dimming on this Crownstone. Required if you want to dim with setSwitchState.
+Enable or disable dimming on this Crownstone. Required if you want to dim with `setSwitch()`.
+
 ### `async disconnect()`
 Tell the Crownstone to disconnect from you. This can help if your Bluetooth stack does not reliably disconnect.
+
 ### `async lockSwitch(lock: bool)`
-Lock the switch. If locked, it's switchState cannot be changed.
+Lock the switch. If locked, its switch state cannot be changed.
+
 ### `async reset()`
 Restart the Crownstone.
 
-<br /> 
 
-### `async setRelay(turnOn: bool)`
-DEVELOPMENT ONLY: you can switch the relay. True for on, False for off. Use the setSwitch instead.
-### `async setDimmer(intensity)`
-DEVELOPMENT ONLY: you can switch the IGBTs. 0 for off, 100 for on, in between for dimming. Use the setSwitch instead.
 
 # State Module
 
@@ -231,7 +224,8 @@ loop.run_until_complete(example())
 
 
 ### `async getSwitchState()`
-Get the switch state as SwitchState class.
+Get the switch state as `SwitchState` class.
+
 ### `async getTime()`
 Get the time on the Crownstone as a timestamp since epoch in seconds. This has been corrected for location.
 
@@ -258,7 +252,7 @@ These events are available for the BLE part of this lib:
 This is a topic to which events are posted which are unique. The same message will be repeated on the advertisement and the rawAdvertisement packets.
 
 ### `BleTopics.rawAdvertisement`
-This topic will broadcast all incoming Crownstone scans, including those that do not belong to your sphere (ie. can't be decrypted with your keys). 
+This topic will broadcast all incoming Crownstone scans, including those that do not belong to your sphere (ie. can't be decrypted with your keys).
 
 ### `BleTopics.advertisement`
 This topic will broadcast all incoming Crownstone scans which belong to your sphere (ie. which can be decrypted with your keys).
@@ -266,7 +260,7 @@ This topic will broadcast all incoming Crownstone scans which belong to your sph
 
 ### Data format
 All these events contain the same data format:
-<a href="#ScanData" />
+
 ```python
 class ScanData:
 
@@ -276,7 +270,7 @@ class ScanData:
         self.name          = None    # name of the device
         self.operationMode = None    # CrownstoneOperationMode enum (SETUP, NORMAL, DFU, UNKNOWN)
         self.serviceUUID   = None    # the UUID of the scanned service
-        self.deviceType    = None    # type of Crownstone 
+        self.deviceType    = None    # type of Crownstone
         self.payload       = None    # See below.
         self.validated     = None    # Whether your provided keys could decrypt this advertisement
 ```
@@ -284,14 +278,14 @@ These fields are always filled. The payload will differ depending on what sort o
 These payloads all have a `type` field [which is defined here.](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/elements/AdvTypes.py)
 Payloads come in these flavours:
 
-- [CROWNSTONE_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneState.py) 
-- [CROWNSTONE_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvErrorPacket.py) 
-- [EXTERNAL_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalCrownstoneState.py)   
-- [EXTERNAL_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalErrorPacket.py)   
+- [CROWNSTONE_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneState.py)
+- [CROWNSTONE_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvErrorPacket.py)
+- [EXTERNAL_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalCrownstoneState.py)
+- [EXTERNAL_ERROR](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvExternalErrorPacket.py)
 - [ALTERNATIVE_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvAlternativeState.py)
-- [HUB_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvHubState.py)        
-- [MICROAPP_DATA](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvMicroappData.py)    
-- [SETUP_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneSetupState.py)    
+- [HUB_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvHubState.py)
+- [MICROAPP_DATA](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvMicroappData.py)
+- [SETUP_STATE](https://github.com/crownstone/crownstone-lib-python-core/blob/master/crownstone_core/packets/serviceDataParsers/containers/AdvCrownstoneSetupState.py)
 
 
 
@@ -312,14 +306,12 @@ BleEventBus.unsubscribe(subscriptionId)
 ```
 
 
+# Common issues
 
-## Bluetooth on Linux
+### Bluetooth on Linux
 
-If bluetooth seems stuck, try
+If bluetooth seems stuck, try:
+```
 sudo rfkill block bluetooth
 sudo rfkill unblock bluetooth
-
-### running
-Something about threading when setup is complete --you don't have Python 3.5
-
-
+```

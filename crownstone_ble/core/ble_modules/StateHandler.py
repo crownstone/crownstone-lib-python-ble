@@ -13,7 +13,6 @@ class StateHandler:
         self.core = bluetoothCore
         
     async def getSwitchState(self) -> SwitchState:
-        # TODO: check result code
         stateVal = await self._getState(StateType.SWITCH_STATE)
         return SwitchState(stateVal[0])
 
@@ -21,7 +20,6 @@ class StateHandler:
         """
         :returns: posix timestamp (uint32)
         """
-        # TODO: check result code
         stateVal = await self._getState(StateType.TIME)
         return Conversion.uint8_array_to_uint32(stateVal)
 
