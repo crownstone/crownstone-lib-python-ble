@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+""" Experimental tool to upload a microapp to a Crownstone. """
+
 import asyncio
 import logging
 from os import path
@@ -50,7 +53,7 @@ async def main():
     print(list(appData[0:32]))
 
     await core.connect(args.bleAddress)
-    info = await core.control.getMicroappInfo()
+    info = await core._dev.getMicroappInfo()
     print(info)
 
     # Perform some checks with the info we received.
@@ -69,21 +72,21 @@ async def main():
     # If there is already some data at this index, it has to be removed first.
     if info.appsStatus[appIndex].tests.hasData:
         print(f"Remove data at index {appIndex}")
-        await core.control.removeMicroapp(appIndex)
+        await core._dev.removeMicroapp(appIndex)
 
     # Determine the chunk size by taking the minimum of our max, and the crownstones max.
     chunkSize = min(maxChunkSize, info.maxChunkSize)
 
     print(f"{datetime.datetime.now()} Start upload with chunkSize={chunkSize}")
-    await core.control.uploadMicroapp(appData, appIndex, chunkSize)
+    await core._dev.uploadMicroapp(appData, appIndex, chunkSize)
     print(f"{datetime.datetime.now()} Upload done")
 
     print("Validate..")
-    await core.control.validateMicroapp(appIndex)
+    await core._dev.validateMicroapp(appIndex)
     print("Validate done")
 
     print("Enable..")
-    await core.control.enableMicroapp(appIndex)
+    await core._dev.enableMicroapp(appIndex)
     print("Enable done")
 
     await core.disconnect()
