@@ -26,14 +26,18 @@ class NotificationDelegate:
     def merge(self, data):
         part = data[0]
 
+        if self.result is not None:
+            _LOGGER.info(f"Last part already received, ignoring this part.")
+            return
+
         # Ignore the case where we receive the same part twice.
         if part == self.previousPart:
-            _LOGGER.warning(f"Already received part {part}, ignoring this part.")
+            _LOGGER.info(f"Already received part {part}, ignoring this part.")
             return
 
         # Check the part number.
         if part != LAST_PACKET_INDEX and part != self.previousPart + 1:
-            _LOGGER.warning(f"Receive part {part}, expected part {self.previousPart + 1}")
+            _LOGGER.info(f"Receive part {part}, expected part {self.previousPart + 1}")
             self.reset()
             return
         self.previousPart = part
@@ -44,18 +48,17 @@ class NotificationDelegate:
         if data[0] == LAST_PACKET_INDEX:
             _LOGGER.debug(f"Received last part. Merged data: {self.dataCollected}")
             result = self.checkPayload()
+            self.reset()
             self.result = result
-            self.dataCollected = []
-            self.previousPart = -1
+            _LOGGER.debug(f"Result: {result}")
             if self.callback is not None:
                 self.callback()
 
     def checkPayload(self):
-        # try:
-        return EncryptionHandler.decrypt(self.dataCollected, self.settings)
-
-        # except CrownstoneBleException as err:
-        #     print(err)
+        try:
+            return EncryptionHandler.decrypt(self.dataCollected, self.settings)
+        except CrownstoneBleException as err:
+            _LOGGER.debug(f"Failed to decrypt: {err.message}")
 
     def reset(self):
         self.previousPart = -1
