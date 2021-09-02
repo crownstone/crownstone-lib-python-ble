@@ -1,9 +1,10 @@
 import asyncio
 import logging
 
+import bleak.exc
 from bleak import BleakClient, BleakScanner
 
-from crownstone_core.Exceptions import CrownstoneBleException
+from crownstone_core.Exceptions import CrownstoneBleException, CrownstoneError
 from crownstone_core.core.modules.EncryptionSettings import EncryptionSettings
 from crownstone_core.protocol.BluenetTypes import ProcessType
 from crownstone_core.util.EncryptionHandler import EncryptionHandler
@@ -142,14 +143,20 @@ class BleHandler:
         self.activeClient = None
 
 
-    async def connect(self, address) -> bool:
+    async def connect(self, address, timeout: int = 5, attempts: int = 3) -> bool:
         # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
         _LOGGER.info(f"Connecting to {address}")
-        # this can throw an error when the connection fails.
-        # these BleakErrors are nicely human readable.
-        # TODO: document/convert these errors.
-        connected  = await self.activeClient.client.connect()
+
+        connected = False
+        for i in range(0, attempts):
+            connected = await self.connectAttempt(timeout)
+            if connected:
+                break
+        if not connected:
+            raise CrownstoneBleException(CrownstoneError.CONNECTION_FAILED)
+
+        _LOGGER.info(f"Connected")
         serviceSet = await self.activeClient.client.get_services()
         self.activeClient.services = {}
         self.activeClient.characteristics = {}
@@ -165,6 +172,18 @@ class BleHandler:
 
         return connected
         # print(self.activeClient.client.services.characteristics)
+
+    async def connectAttempt(self, timeout: int) -> bool:
+        # this can throw an error when the connection fails.
+        # these BleakErrors are nicely human readable.
+        # TODO: document/convert these errors.
+        try:
+            _LOGGER.debug(f"Connecting..")
+            connected = await self.activeClient.client.connect(timeout = timeout)
+        except bleak.BleakError as err:
+            _LOGGER.info(f"Failed to connect: {err}")
+            connected = False
+        return connected
 
 
     async def disconnect(self):
