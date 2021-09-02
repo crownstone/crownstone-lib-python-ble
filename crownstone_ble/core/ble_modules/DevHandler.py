@@ -16,7 +16,7 @@ class DevHandler:
     async def setCurrentThresholdDimmer(self, currentAmp: float):
         packet = ControlStateSetPacket(StateType.CURRENT_CONSUMPTION_THRESHOLD_DIMMER)
         packet.loadUInt16(currentAmp * 1000)
-        await self.core.state._setState(StateType.SWITCH_STATE, packet)
+        await self.core.state._setState(packet)
 
     async def getCurrentThresholdDimmer(self) -> float:
         rawState = await self.core.state._getState(StateType.CURRENT_CONSUMPTION_THRESHOLD_DIMMER)
