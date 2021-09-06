@@ -24,6 +24,8 @@ Tools are configured via:
 
 ## Tool config
 
+This is the tool config format. It is shown in /config/tool_config.template.json.
+
 #### Obtaining keys
 
 Go to [my.crownstone](my.crownstone.rocks) and copy the access token to your clipboard.
