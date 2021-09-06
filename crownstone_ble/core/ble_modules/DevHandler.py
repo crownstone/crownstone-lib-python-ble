@@ -1,6 +1,7 @@
 import logging
 
 from crownstone_core import Conversion
+from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.microapp.MicroappHeaderPacket import MicroappHeaderPacket
 from crownstone_core.packets.microapp.MicroappInfoPacket import MicroappInfoPacket
 from crownstone_core.packets.microapp.MicroappUploadPacket import MicroappUploadPacket
@@ -24,7 +25,7 @@ class DevHandler:
         return currentThresholdMilliAmp / 1000.0
 
     async def getMicroappInfo(self) -> MicroappInfoPacket:
-        resultPacket = await self._writeControlAndGetResult(ControlPacket(ControlType.MICROAPP_GET_INFO).serialize())
+        resultPacket = await self.core.control._writeControlAndGetResult(ControlPacket(ControlType.MICROAPP_GET_INFO).serialize())
         _LOGGER.info(f"getMicroappInfo {resultPacket}")
         infoPacket = MicroappInfoPacket(resultPacket.payload)
         return infoPacket
@@ -44,22 +45,22 @@ class DevHandler:
         header = MicroappHeaderPacket(appIndex=index)
         packet = MicroappUploadPacket(header, offset, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.serialize()).serialize()
-        await self._writeControlAndWaitForSuccess(controlPacket)
+        await self.core.control._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"uploaded chunk offset={offset}")
         # TODO: return the final result?
 
     async def validateMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.serialize()).serialize()
-        await self._writeControlAndGetResult(controlPacket)
+        await self.core.control._writeControlAndGetResult(controlPacket)
 
     async def enableMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.serialize()).serialize()
-        await self._writeControlAndGetResult(controlPacket)
+        await self.core.control._writeControlAndGetResult(controlPacket)
 
     async def removeMicroapp(self, index):
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.serialize()).serialize()
-        await self._writeControlAndWaitForSuccess(controlPacket)
+        await self.core.control._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"Removed app {index}")
