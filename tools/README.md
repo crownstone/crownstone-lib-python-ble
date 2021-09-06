@@ -24,7 +24,14 @@ Tools are configured via:
 
 ## Tool config
 
-This is the tool config format. It is shown in /config/tool_config.template.json.
+#### Optaining keys
+
+Go to [my.crownstone](my.crownstone.rocks) and copy the access token to your clipboard.
+Click of the [Crownstone REST API explorer](https://my.crownstone.rocks/explorer/), and set your access tokes.
+Now you are able to make call to the API.
+
+To get your sphere keys to to the *users/me* tab, click the *try it out* button, and copy your ID from the responce body.
+With this ID you can access your keys on the */users/{id}/keysV2* tab. Fill your ID into the form and the responce body should display the keys and keytypes. These have to be formatted like shown bellow. This is the tool config format. It is shown in /config/tool_config.template.json.
 ```
 {
   "absolutePathToKeyFile": null,
