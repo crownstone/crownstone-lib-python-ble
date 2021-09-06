@@ -25,6 +25,15 @@ Tools are configured via:
 ## Tool config
 
 This is the tool config format. It is shown in /config/tool_config.template.json.
+
+#### Obtaining keys
+
+Go to [my.crownstone](my.crownstone.rocks) and copy the access token to your clipboard.
+Click of the [Crownstone REST API explorer](https://my.crownstone.rocks/explorer/), and set your access tokes.
+Now you are able to make calls to the API.
+
+To get your sphere keys go to the *users/me* tab, click the *try it out* button, and copy your ID from the response body.
+With this ID you can access your keys on the */users/{id}/keysV2* tab. Fill your ID into the form and the response body should display the keys and key types. These have to be formatted like shown bellow.
 ```
 {
   "absolutePathToKeyFile": null,
@@ -52,6 +61,7 @@ The bleAdapterAddress of the BLE chip you want the library to use.
 
 ## Key file
 This is the format of the key_file.json. You can use it via the absolutePathToKeyFile config or via the keyFile command line argument.
+
 ```
 {
   "admin":              "adminKeyForCrown",
