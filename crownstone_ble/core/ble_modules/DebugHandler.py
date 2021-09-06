@@ -2,10 +2,11 @@ from crownstone_core.Exceptions import CrownstoneError, CrownstoneException
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.debug.AdcChannelSwapsPacket import AdcChannelSwapsPacket
 from crownstone_core.packets.debug.AdcRestartsPacket import AdcRestartsPacket
+from crownstone_core.packets.debug.BootloaderInfoPacket import BootloaderInfoPacket, BOOTLOADER_INFO_PROTOCOL
 from crownstone_core.packets.debug.PowerSamplesPacket import PowerSamplesPacket
 from crownstone_core.packets.debug.SwitchHistoryPacket import SwitchHistoryListPacket
 from crownstone_core.protocol.BluenetTypes import ResultValue
-from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics
+from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics, DeviceCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacket, ControlType
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
 from crownstone_core.protocol.Services import CSServices
@@ -15,6 +16,33 @@ from crownstone_core.util.Conversion import Conversion
 class DebugHandler:
 	def __init__(self, bluetoothCore):
 		self.core = bluetoothCore
+
+	async def getHardwareVersion(self) -> str:
+		""" Get the hardware version of the Crownstone as string. """
+		buf = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.DeviceInformation, DeviceCharacteristics.HardwareRevision)
+		return Conversion.uint8_array_to_string(buf)
+
+	async def getFirmwareVersion(self) -> str:
+		""" Get the firmware version of the Crownstone as string. """
+		buf = await self.core.ble.readCharacteristicWithoutEncryption(CSServices.DeviceInformation, DeviceCharacteristics.FirmwareRevision)
+		return Conversion.uint8_array_to_string(buf)
+
+	async def getBootloaderVersion(self) -> str:
+		""" Get the bootloader version of the Crownstone as simple string. """
+		bootloaderInfo = await self.getBootloaderInfo()
+		if bootloaderInfo.protocol != BOOTLOADER_INFO_PROTOCOL:
+			raise CrownstoneException(CrownstoneError.PROTOCOL_NOT_SUPPORTED)
+		bootloaderVersion = f"{bootloaderInfo.major}.{bootloaderInfo.minor}.{bootloaderInfo.patch}"
+		if bootloaderInfo.preReleaseVersion != 255:
+			bootloaderVersion += f".{bootloaderInfo.preReleaseVersion}"
+		return bootloaderVersion
+
+	async def getBootloaderInfo(self) -> BootloaderInfoPacket:
+		controlPacket = ControlPacket(ControlType.GET_BOOTLOADER_VERSION).serialize()
+		result = await self._writeControlAndGetResult(controlPacket)
+		if result.resultCode != ResultValue.SUCCESS:
+			raise CrownstoneException(CrownstoneError.RESULT_NOT_SUCCESS, "Result: " + str(result.resultCode))
+		return BootloaderInfoPacket(result.payload)
 
 	async def getUptime(self):
 		""" Get the uptime of the crownstone in seconds. """
@@ -80,4 +108,4 @@ class DebugHandler:
 		await self.core.control._writeControlPacket(packet)
 
 	async def _writeControlAndGetResult(self, controlPacket) -> ResultPacket:
-		return await self.core.control._writeControlPacketAndGetResult(controlPacket)
+		return await self.core.control._writeControlAndGetResult(controlPacket)
