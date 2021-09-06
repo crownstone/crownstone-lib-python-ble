@@ -59,6 +59,7 @@ The bleAdapterAddress of the BLE chip you want the library to use.
 
 ## Key file
 This is the format of the key_file.json. You can use it via the absolutePathToKeyFile config or via the keyFile command line argument.
+
 ```
 {
   "admin":              "adminKeyForCrown",
