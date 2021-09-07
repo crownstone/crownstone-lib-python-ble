@@ -102,7 +102,7 @@ class ControlHandler:
                 raise err
 
         # Disconnect from this side as well.
-        self.core.ble.disconnect()
+        await self.core.ble.disconnect()
 
 
     async def lockSwitch(self, lock: bool):
