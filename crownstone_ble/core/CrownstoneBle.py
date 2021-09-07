@@ -83,9 +83,16 @@ class CrownstoneBle:
         self.loadSettingsFromDictionary(data)
 
 
-    async def connect(self, address, ignoreEncryption=False):
-        # TODO: let available services determine whether or not to use encryption.
-        await self.ble.connect(address)
+    async def connect(self, address: str, timeout: int = 5, attempts: int = 3, ignoreEncryption=False):
+        """
+        Connect to a Crownstone.
+
+        :param address:           MAC address of the Crownstone, in the format: 12:34:56:78:ab:cd
+        :param timeout:           Time in seconds before giving up, for each connection attempt.
+        :param attempts:          Number of connection attempts.
+        :param ignoreEncryption:  True when encryption will not be used for this session.
+        """
+        await self.ble.connect(address, timeout=timeout, attempts=attempts)
         if not ignoreEncryption:
             await self.control._getAndSetSessionNonce()
 
