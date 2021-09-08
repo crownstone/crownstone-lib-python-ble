@@ -322,7 +322,7 @@ class BleHandler:
         mergedNotifications = []
         def onMergedNotification():
             mergedNotifications.append(notificationDelegate.result)
-            # notificationDelegate.reset()
+            notificationDelegate.reset()
 
         # Subscribe for notifications and let the delegate merge them.
         _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
@@ -343,7 +343,7 @@ class BleHandler:
             _LOGGER.debug(f"loopActive={self.notificationLoopActive} loopCount={loopCount}")
             loopCount += 1
             if len(mergedNotifications):
-                command = mergedNotifications.pop(0)
+                command = resultHandler(mergedNotifications.pop(0))
                 if command == ProcessType.ABORT_ERROR:
                     _LOGGER.debug("abort")
                     self.notificationLoopActive = False
