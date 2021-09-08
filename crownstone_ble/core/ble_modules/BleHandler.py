@@ -144,10 +144,13 @@ class BleHandler:
 
 
     async def connect(self, address, timeout: int = 5, attempts: int = 3) -> bool:
+        # Always clean up cached setup key for a new connection.
+        self.settings.exitSetup()
+
         # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
-        _LOGGER.info(f"Connecting to {address}")
 
+        _LOGGER.info(f"Connecting to {address}")
         connected = False
         for i in range(0, attempts):
             connected = await self.connectAttempt(timeout)
@@ -168,10 +171,7 @@ class BleHandler:
         self.activeClient.notificationCallbacks = {}
         self.activeClient.notificationSubscriptions = {}
 
-
-
         return connected
-        # print(self.activeClient.client.services.characteristics)
 
     async def connectAttempt(self, timeout: int) -> bool:
         # this can throw an error when the connection fails.
@@ -188,6 +188,7 @@ class BleHandler:
 
     async def disconnect(self):
         if self.activeClient is not None:
+            self.settings.exitSetup()
             await self.activeClient.client.disconnect()
             self.activeClient = None
 

@@ -105,7 +105,6 @@ class CrownstoneBle:
         await self.setup.setup(address, sphereId, crownstoneId, meshDeviceKey, ibeaconUUID, ibeaconMajor, ibeaconMinor)
 
     async def disconnect(self):
-        self.settings.exitSetup()
         await self.ble.disconnect()
     
     async def startScanning(self, scanDuration=3):
