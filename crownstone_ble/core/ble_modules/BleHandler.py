@@ -317,16 +317,22 @@ class BleHandler:
         _LOGGER.debug(f"setupNotificationStream serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} timeout={timeout}")
         await self.is_connected_guard()
 
-        # setup the collecting of the notification data.
+        # Collect all merged notifications in a queue, so we can process them all.
+        mergedNotifications = []
+        def onMergedNotification():
+            mergedNotifications.append(notificationDelegate.result)
+            # notificationDelegate.reset()
+
+        # Subscribe for notifications and let the delegate merge them.
         _LOGGER.debug(f"setupNotificationStream: subscribe for notifications.")
-        notificationDelegate = NotificationDelegate(None, self.settings)
+        notificationDelegate = NotificationDelegate(onMergedNotification, self.settings)
         await self.activeClient.subscribeNotifications(characteristicUUID, notificationDelegate.handleNotification)
 
-        # execute something that will trigger the notifications
+        # Execute something that will trigger the notifications.
         _LOGGER.debug(f"setupNotificationStream: writeCommand().")
         await writeCommand()
 
-        # wait for the results to come in.
+        # Wait for the results to come in.
         self.notificationLoopActive = True
         loopCount = 0
         successful = False
@@ -335,9 +341,8 @@ class BleHandler:
             await asyncio.sleep(polInterval)
             _LOGGER.debug(f"loopActive={self.notificationLoopActive} loopCount={loopCount}")
             loopCount += 1
-            if notificationDelegate.result is not None:
-                command = resultHandler(notificationDelegate.result)
-                notificationDelegate.reset()
+            if len(mergedNotifications):
+                command = mergedNotifications.pop(0)
                 if command == ProcessType.ABORT_ERROR:
                     _LOGGER.debug("abort")
                     self.notificationLoopActive = False
