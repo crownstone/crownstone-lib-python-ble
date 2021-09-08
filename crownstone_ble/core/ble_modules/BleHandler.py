@@ -298,9 +298,9 @@ class BleHandler:
         # wait for the results to come in.
         self.notificationLoopActive = True
         loopCount = 0
-        polInterval = 0.1
-        while self.notificationLoopActive and loopCount < (timeout / polInterval):
-            await asyncio.sleep(polInterval)
+        pollInterval = 0.1
+        while self.notificationLoopActive and loopCount < (timeout / pollInterval):
+            await asyncio.sleep(pollInterval)
             loopCount += 1
 
 
@@ -337,9 +337,9 @@ class BleHandler:
         self.notificationLoopActive = True
         loopCount = 0
         successful = False
-        polInterval = 0.1
-        while self.notificationLoopActive and loopCount < (timeout / polInterval):
-            await asyncio.sleep(polInterval)
+        pollInterval = 0.1
+        while self.notificationLoopActive and loopCount < (timeout / pollInterval):
+            await asyncio.sleep(pollInterval)
             _LOGGER.debug(f"loopActive={self.notificationLoopActive} loopCount={loopCount}")
             loopCount += 1
             if len(mergedNotifications):
