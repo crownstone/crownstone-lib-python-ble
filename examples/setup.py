@@ -5,18 +5,24 @@ Example that looks for a Crownstone in setup mode, and performs the setup with d
 After the setup, the Crownstone will be factory reset, so it returns to setup mode.
 """
 
+# Asyncio provides the API for using async/await methods.
 import asyncio
 
-from crownstone_core.Enums import CrownstoneOperationMode
+# Import the Crownstone BLE library in order to use it.
 from crownstone_ble import CrownstoneBle
+from crownstone_core.Enums import CrownstoneOperationMode
 from crownstone_core.Exceptions import CrownstoneException
 
-# Initialize the Bluetooth Core.
+# Initialize the Crownstone BLE library.
 core = CrownstoneBle()
 
-# We're loading some default encryption keys into the library. These keys can be 16 character ASCII, or 32 character hexstrings.
+# We're loading some dummy encryption keys into the library.
+# These keys should be the same for every Crownstone in the sphere.
+# The keys can be 16 character ASCII, or 32 character hexstrings.
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
+# Since the entire library used async methods for all asynchronous processes, we need to wrap the actual usage inside an async function.
+# Explaining asyncio is beyond the scope of this tutorial, you should be able to find plenty of information about it elsewhere.
 async def setup_procedure():
     print("Searching for the nearest setup Crownstone...")
     nearestStone = await core.getNearestSetupCrownstone()
@@ -27,6 +33,9 @@ async def setup_procedure():
         return
     print(f"Found a Crownstone in setup mode.")
 
+    # This method uses the keys you set earlier, as well as the method arguments to perform the setup.
+    # The sphere ID and iBeacon UUID should be the same for every Crownstone in the sphere.
+    # The Crownstone ID, mesh device key, and iBeacon major/minor should be different for each Crownstone in the sphere.
     print(f"Setup Crownstone with MAC address {nearestStone.address}, using dummy IDs and keys.")
     await core.setupCrownstone(
         nearestStone.address,
