@@ -22,7 +22,7 @@ core = CrownstoneBle()
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
 
 # Since the entire library used async methods for all asynchronous processes, we need to wrap the actual usage inside an async function.
-# Explaining asyncio is beyond the scope of this tutorial, you should be able to find plenty of information about it elsewhere.
+# Explaining asyncio is beyond the scope of this example, you should be able to find plenty of information about it elsewhere.
 async def setup_procedure():
     print("Searching for the nearest setup Crownstone...")
     nearestStone = await core.getNearestSetupCrownstone()
@@ -80,4 +80,4 @@ try:
     asyncio.run(setup_procedure())
 except KeyboardInterrupt:
     # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
-    print("Closing the procedure.")
+    print("Stopping the example.")
