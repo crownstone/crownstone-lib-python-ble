@@ -48,6 +48,8 @@ async def switch_crownstone():
 
         print("Done! Disconnect and shut down.")
         await core.control.disconnect()
+
+    # Handle the case something went wrong.
     except (CrownstoneException, CrownstoneBleException) as e:
         print(e)
         print("")
