@@ -11,7 +11,7 @@ import asyncio
 # Import the Crownstone BLE library in order to use it.
 from crownstone_ble import CrownstoneBle
 from crownstone_core.Enums import CrownstoneOperationMode
-from crownstone_core.Exceptions import CrownstoneException
+from crownstone_core.Exceptions import CrownstoneException, CrownstoneBleException
 
 # Initialize the Crownstone BLE library.
 core = CrownstoneBle()
@@ -20,6 +20,7 @@ core = CrownstoneBle()
 # These keys should be the same for every Crownstone in the sphere.
 # The keys can be 16 character ASCII, or 32 character hexstrings.
 core.setSettings("adminKeyForCrown", "memberKeyForHome", "basicKeyForOther", "MyServiceDataKey", "aLocalizationKey", "MyGoodMeshAppKey", "MyGoodMeshNetKey")
+
 
 # Since the entire library used async methods for all asynchronous processes, we need to wrap the actual usage inside an async function.
 # Explaining asyncio is beyond the scope of this example, you should be able to find plenty of information about it elsewhere.
@@ -48,14 +49,16 @@ async def setup_procedure():
     )
     print(f"Setup complete!")
 
+
     try:
         print(f"Waiting for Crownstone to reboot and show up in normal mode...")
         await core.waitForMode(nearestStone.address, CrownstoneOperationMode.NORMAL, scanDuration=10)
         print(f"Success!")
-    except CrownstoneException as e:
+    except (CrownstoneException, CrownstoneBleException) as e:
         print(f"Did not see the Crownstone in normal mode, setup up probably failed: {e}")
 
     print(f"Reset the Crownstone back into setup mode just for the sake of the example.")
+
 
     print(f"Connecting...")
     await core.connect(nearestStone.address)
@@ -64,20 +67,22 @@ async def setup_procedure():
     await core.control.commandFactoryReset()
     print(f"Factory reset complete!")
 
+
     try:
         print(f"Waiting for Crownstone to reboot and show up in setup mode...")
         await core.waitForMode(nearestStone.address, CrownstoneOperationMode.SETUP, scanDuration=10)
-    except CrownstoneException as e:
+    except (CrownstoneException, CrownstoneBleException) as e:
         print(f"Did not see the Crownstone in setup mode, factory reset probably failed: {e}")
 
     # Clean up all pending processes.
     print("All done! Shutting down.")
     await core.shutDown()
 
+
 # This is where we actually start running the example.
 # Python does not allow us to run async functions like they're normal functions.
 try:
     asyncio.run(setup_procedure())
 except KeyboardInterrupt:
-    # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
+    # this catches the CONTROL+C case, which can otherwise result in arbitrary interrupt errors.
     print("Stopping the example.")

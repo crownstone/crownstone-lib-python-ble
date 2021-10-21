@@ -43,6 +43,7 @@ async def scan():
 
     print("Done, shutting down.")
     await core.shutDown()
+    print("If there was no result, check if you used the right keys, and that your Crownstone is powered.")
 
 
 # This is where we actually start running the example.
@@ -50,5 +51,5 @@ async def scan():
 try:
     asyncio.run(scan())
 except KeyboardInterrupt:
-    # this catches the CONTROL+C case, which can otherwise result is arbitrary interrupt errors.
+    # this catches the CONTROL+C case, which can otherwise result in arbitrary interrupt errors.
     print("Stopping the example.")
