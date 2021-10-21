@@ -27,17 +27,17 @@ class NotificationDelegate:
         part = data[0]
 
         if self.result is not None:
-            _LOGGER.info(f"Last part already received, ignoring this part.")
+            _LOGGER.debug(f"Last part already received, ignoring this part.")
             return
 
         # Ignore the case where we receive the same part twice.
         if part == self.previousPart:
-            _LOGGER.info(f"Already received part {part}, ignoring this part.")
+            _LOGGER.debug(f"Already received part {part}, ignoring this part.")
             return
 
         # Check the part number.
         if part != LAST_PACKET_INDEX and part != self.previousPart + 1:
-            _LOGGER.info(f"Receive part {part}, expected part {self.previousPart + 1}")
+            _LOGGER.debug(f"Receive part {part}, expected part {self.previousPart + 1}")
             self.reset()
             return
         self.previousPart = part
