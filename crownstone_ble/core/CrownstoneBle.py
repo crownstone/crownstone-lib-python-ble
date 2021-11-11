@@ -175,13 +175,12 @@ class CrownstoneBle:
 
     async def getMode(self, address, scanDuration=3) -> CrownstoneOperationMode:
         """
-        This will wait until it has received an advertisement from the Crownstone with the specified address. Once it has received an advertisement, it knows the mode.
-
-        We will return once we know.
-
-        It can throw the following CrownstoneBleException
-        - BleError.NO_SCANS_RECEIVED
-            We have not received any scans from this Crownstone, and can't say anything about it's state.
+        Get the operation mode of the Crownstone with given MAC address.
+        This will scan for advertisements, and return on the first useful advertisement from the given MAC address.
+        :param address:                The MAC address of the Crownstone.
+        :param scanDuration:           Timeout in seconds.
+        :returns:                      The operation mode of the Crownstone.
+        :raises BleError.NO_SCANS_RECEIVED: On timeout, no useful advertisements have been received.
         """
         _LOGGER.debug(f"getMode address={address} scanDuration={scanDuration}")
         checker = ModeChecker(address, None)
