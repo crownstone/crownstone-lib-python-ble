@@ -10,6 +10,7 @@ import datetime
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 from util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
+tool_version = "1.0.0"
 
 parser = setupDefaultCommandLineArguments('Scan for any Crownstones continuously and print the results.')
 parser.add_argument('-a', '--bleAddress', required=True, help='The MAC address/handle of the Crownstone you want to connect to')
