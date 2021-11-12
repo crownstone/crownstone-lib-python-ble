@@ -1,3 +1,3 @@
 # See https://www.python.org/dev/peps/pep-0440/#compatible-release
-crownstone-core~=3.0
+crownstone-core~=3.1
 bleak==0.10
