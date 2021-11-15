@@ -8,7 +8,7 @@ from os import path
 import datetime
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
-from util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
+from tools.util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
 tool_version = "1.0.0"
 
