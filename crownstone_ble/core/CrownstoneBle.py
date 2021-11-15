@@ -59,6 +59,9 @@ class CrownstoneBle:
         self.defaultKeysOverridden = True
 
     def loadSettingsFromDictionary(self, data):
+        """
+        TODO(2021-111-15, Arend): rename function to loadKeysFromDictionary
+        """
         if "admin" not in data:
             raise CrownstoneBleException(CrownstoneError.ADMIN_KEY_REQUIRED)
         if "member" not in data:
@@ -78,6 +81,9 @@ class CrownstoneBle:
                          data["meshApplicationKey"], data["meshNetworkKey"])
 
     def loadSettingsFromFile(self, path):
+        """
+        TODO(2021-111-15, Arend): rename function to loadKeysFromFile
+        """
         fileReader = JsonFileStore(path)
         data = fileReader.getData()
         self.loadSettingsFromDictionary(data)
