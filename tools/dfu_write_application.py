@@ -128,22 +128,35 @@ async def main(cs_ble, conf):
 
     print("Main")
     printer.pprint(conf)
-    # with open(args.file, "rb") as f:
-    #     appData = f.read()
-    #
-    # print("First 32 bytes of the binary:")
-    # print(list(appData[0:32]))
-    #
+
+    # ----------------------------------------
+    # set up the transport layer
+    # ----------------------------------------
+    dfu_transport = None
+    # ble_backend = DfuTransportBle(serial_port=str(port),
+    #                               att_mtu=att_mtu,
+    #                               target_device_name=str(name),
+    #                               target_device_addr=str(address))
+    # ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
+    # dfu = Dfu(zip_file_path=package, dfu_transport=ble_backend, connect_delay=connect_delay)
+
+    # ----------------------------------------
+    # send init packet
+    with open(conf['dfu']['datFile'], 'rb') as f:
+        fileContent = f.read()
+        dfu_transport.send_init_packet(fileContent)
+
+    # send firmware file
+    with open(conf['dfu']['binFile'], 'rb') as f:
+        fileContent = f.read()
+        dfu_transport.send_firmware(fileContent)
+
+    dfu_transport.close()
+
     # await core.connect(args.bleAddress)
-    #
     # chunkSize = 192
-    # print(f"{datetime.datetime.now()} Start uploading with chunkSize={chunkSize}")
     # # await core._dev.uploadMicroapp(appData, appIndex, chunkSize)
-    # print(f"{datetime.datetime.now()} Upload done")
-    #
-    # print("Validate..")
-    # # await core._dev.validateMicroapp(appIndex)
-    # print("Validate done")
+
 
     while True:
         await asyncio.sleep(1)
