@@ -1,3 +1,6 @@
+import queue
+import struct
+
 from tools.dfu.dfu_transport import DfuTransport, DfuEvent
 from tools.dfu.dfu_exceptions import *
 
