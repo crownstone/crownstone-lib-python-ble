@@ -9,6 +9,7 @@ import datetime
 import pprint
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
+from tools.dfu.dfu_transport_ble import CrownstoneDfuOverBle
 from tools.util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
 tool_version = "1.0.0"
@@ -35,13 +36,16 @@ def findDfuFile(path_to_file, filename):
 
     return None
 
-def overwriteDfuConfWithArgIfAvailable(conf, parsed_args, argname):
+def overwriteConfWithArgIfAvailable(conf, parsed_args, argname, section = None):
     """
     Overwrites the 'dfu' section of tool_config.json with commandline arguments when given argname is available.
     """
     arg_val = getattr(parsed_args, argname)
     if arg_val is not None:
-        conf['dfu'][argname] = arg_val
+        if section is not None:
+            conf[section][argname] = arg_val
+        else:
+            conf[argname] = arg_val
 
 def validateDfuConf(file_path, conf):
     """
@@ -81,42 +85,32 @@ def validateDfuConf(file_path, conf):
 
     raise ValueError("need either a zip file or both a bin and a dat file for dfu")
 
-def toolSetup():
+def validateAddressConf(conf):
+    if conf.get('bleAdapterAddress') is None:
+        raise ValueError("need bleAdapterAddress for setup of crownstone")
+
+    if conf.get('bleAddress') is None:
+        raise ValueError("need bleAddress of target device for dfu")
+
+def loadToolConfig():
     parser = setupDefaultCommandLineArguments('Scan for any Crownstones continuously and print the results.')
     parser.add_argument('-a', '--bleAddress', required=True, help='The MAC address/handle of the Crownstone you want to connect to')
     parser.add_argument('-z', '--zipFile', default=None, help='zip file describing the binary to upload')
     parser.add_argument('-b', '--binFile', default=None, help='Binary of the application to upload')
     parser.add_argument('-d', '--datFile', default=None, help='Dat file describing the binary to upload')
 
-    try:
-        file_path = path.dirname(path.realpath(__file__))
-        [tool_config, parsed_args] = getToolConfig(file_path, parser)
-    except Exception as e:
-        print("ERROR", e)
-        quit()
+    file_path = path.dirname(path.realpath(__file__))
+    [tool_config, parsed_args] = getToolConfig(file_path, parser)
 
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'zipFile')
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'binFile')
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'datFile')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'zipFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'binFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'datFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'bleAddress')
 
-    try:
-        validateDfuConf(file_path, tool_config)
-    except ValueError as e:
-        print("ERROR dfu conf validation failed", e)
-        quit()
+    validateDfuConf(file_path, tool_config)
+    validateAddressConf(tool_config)
 
-    # create the library instance
-    print(f'Initializing tool with bleAdapterAddress={tool_config["bleAdapterAddress"]}')
-    cs_ble = CrownstoneBle(bleAdapterAddress=tool_config["bleAdapterAddress"])
-
-    # load the encryption keys into the library
-    try:
-        loadKeysFromConfig(cs_ble, tool_config)
-    except Exception as e:
-        print("ERROR", e)
-        quit()
-
-    return tool_config, cs_ble, parsed_args
+    return tool_config
 
 async def terminate(cs_ble):
     print("terminating crownstone bluetooth core")
@@ -132,13 +126,13 @@ async def main(cs_ble, conf):
     # ----------------------------------------
     # set up the transport layer
     # ----------------------------------------
-    dfu_transport = None
-    # ble_backend = DfuTransportBle(serial_port=str(port),
-    #                               att_mtu=att_mtu,
-    #                               target_device_name=str(name),
-    #                               target_device_addr=str(address))
-    # ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    # dfu = Dfu(zip_file_path=package, dfu_transport=ble_backend, connect_delay=connect_delay)
+
+    await cs_ble.connect(conf['bleAddress'])
+    # TODO: any open/connect/register for notification call etc.
+    # TODO: send goto DFU mode, wait, reconnect using MAC...
+
+    dfu_transport = CrownstoneDfuOverBle()
+
 
     # ----------------------------------------
     # send init packet
@@ -153,7 +147,6 @@ async def main(cs_ble, conf):
 
     dfu_transport.close()
 
-    # await core.connect(args.bleAddress)
     # chunkSize = 192
     # # await core._dev.uploadMicroapp(appData, appIndex, chunkSize)
 
@@ -166,7 +159,13 @@ async def main(cs_ble, conf):
 
 
 if __name__ == "__main__":
-    conf, cs_ble, parsed_args = toolSetup()
+    conf = loadToolConfig()
+
+    print(f'Initializing tool with bleAdapterAddress={conf["bleAdapterAddress"]}')
+    cs_ble = CrownstoneBle(bleAdapterAddress=conf["bleAdapterAddress"])
+
+    # load the encryption keys into the library
+    loadKeysFromConfig(cs_ble, conf)
 
     try:
         # asyncio.run does not work here.
@@ -175,4 +174,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Stopping.")
     finally:
-        terminate()
+        terminate(cs_ble)

@@ -1,3 +1,6 @@
+### Some constants defined below the class definitions
+from enum import Enum
+
 
 class BLEUUIDBase(object):
     def __init__(self, vs_uuid_base=None, uuid_type=None):
@@ -22,24 +25,21 @@ class BLEUUIDBase(object):
                 0x34,
                 0xFB,
             ]
-            self.type = driver.BLE_UUID_TYPE_BLE
-
         else:
             self.base = vs_uuid_base
-            self.type = uuid_type
 
         self.__array = None
 
-    @classmethod
-    def from_c(cls, uuid):
-        return cls(uuid_type=uuid.type)
+    # @classmethod
+    # def from_c(cls, uuid):
+    #     return cls(uuid_type=uuid.type)
 
-    def to_c(self):
-        lsb_list = self.base[::-1]
-        self.__array = util.list_to_uint8_array(lsb_list)
-        uuid = driver.ble_uuid128_t()
-        uuid.uuid128 = self.__array.cast()
-        return uuid
+    # def to_c(self):
+    #     lsb_list = self.base[::-1]
+    #     self.__array = util.list_to_uint8_array(lsb_list)
+    #     uuid = driver.ble_uuid128_t()
+    #     uuid.uuid128 = self.__array.cast()
+    #     return uuid
 
 
 class BLEUUID(object):
@@ -97,16 +97,16 @@ class BLEUUID(object):
     def __hash__(self):
         return hash(self.value * (self.base.type or 1))
 
-    @classmethod
-    def from_c(cls, uuid):
-        return cls(value=uuid.uuid, base=BLEUUIDBase.from_c(uuid))
-
-    def to_c(self):
-        assert self.base.type is not None, "Vendor specific UUID not registered"
-        uuid = driver.ble_uuid_t()
-        if isinstance(self.value, BLEUUID.Standard):
-            uuid.uuid = self.value.value
-        else:
-            uuid.uuid = self.value
-        uuid.type = self.base.type
-        return uuid
+    # @classmethod
+    # def from_c(cls, uuid):
+    #     return cls(value=uuid.uuid, base=BLEUUIDBase.from_c(uuid))
+    #
+    # def to_c(self):
+    #     assert self.base.type is not None, "Vendor specific UUID not registered"
+    #     uuid = driver.ble_uuid_t()
+    #     if isinstance(self.value, BLEUUID.Standard):
+    #         uuid.uuid = self.value.value
+    #     else:
+    #         uuid.uuid = self.value
+    #     uuid.type = self.base.type
+    #     return uuid
