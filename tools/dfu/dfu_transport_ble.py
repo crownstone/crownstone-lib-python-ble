@@ -35,6 +35,10 @@ class DfuTransportBle(DfuTransport):
 
     RETRIES_NUMBER = 3
 
+    """
+    TODO(Arend): hook up __get_response to CrownstoneBLE notifications 
+    """
+
     def write_cmd(self, uuid, data):
         ## TODO (Arend)
         pass
@@ -42,6 +46,9 @@ class DfuTransportBle(DfuTransport):
     def write_req(self, uuid, data):
         ## TODO (Arend)
         pass
+
+
+    ### -----
 
     def write_control_point(self, data):
         self.write_req(self.conn_handle, DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
@@ -177,7 +184,7 @@ class DfuTransportBle(DfuTransport):
         current_pnr = 0
         for i in range(0, len(data), self.dfu_adapter.packet_size):
             to_transmit = data[i:i + self.dfu_adapter.packet_size]
-            self.write_cmd(DP_UUID, data)
+            self.write_cmd(DFUAdapter.DP_UUID, data)
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
@@ -230,9 +237,10 @@ class DfuTransportBle(DfuTransport):
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
-
-
     def __get_response(self, operation):
+        """
+        waits for a notify of the device with OP_CODE == operation and return if possible.
+        """
         def get_dict_key(dictionary, value):
             return next((key for key, val in list(dictionary.items()) if val == value), None)
 
