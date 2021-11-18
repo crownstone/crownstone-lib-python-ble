@@ -38,6 +38,18 @@ class DfuTransportBle(DfuTransport):
         ## TODO (Arend)
         pass
 
+    def write_req(self, uuid, data):
+        ## TODO (Arend)
+        pass
+
+    def write_control_point(self, data):
+        self.write_req(self.conn_handle, DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
+        # waits for result
+
+    def write_data_point(self, data):
+        self.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)  ## ble_gattc_write  (... BLEGattWriteOperation.write_cmd ...)
+        # waits for result
+
     ### -------------------------
 
     def try_to_recover_before_send_init(self, select_cmd_response, init_packet):
@@ -94,7 +106,7 @@ class DfuTransportBle(DfuTransport):
         self.__create_object(0x02, size)
 
     def __create_object(self, object_type, size):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+        self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
                                             + list(struct.pack('<L', size)))
         self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
@@ -182,20 +194,18 @@ class DfuTransportBle(DfuTransport):
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
+        self.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
 
-
-
     def __calculate_checksum(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
+        self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
         response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
     def __execute(self):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['Execute']])
+        self.write_control_point([DfuTransportBle.OP_CODE['Execute']])
         self.__get_response(DfuTransportBle.OP_CODE['Execute'])
 
     def __select_command(self):
@@ -206,7 +216,7 @@ class DfuTransportBle(DfuTransport):
 
     def __select_object(self, object_type):
         logger.debug("BLE: Selecting Object: type:{}".format(object_type))
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
+        self.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
         response = self.__get_response(DfuTransportBle.OP_CODE['ReadObject'])
 
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
