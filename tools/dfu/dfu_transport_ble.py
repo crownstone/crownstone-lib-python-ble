@@ -2,6 +2,7 @@ import queue
 import struct
 
 from tools.dfu.ble_uuid import *
+from tools.dfu.dfu_constants import DFUAdapter
 from tools.dfu.dfu_transport import DfuTransport, DfuEvent
 from tools.dfu.dfu_exceptions import *
 
