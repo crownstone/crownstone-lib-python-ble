@@ -12,84 +12,59 @@ logger = logging.getLogger(__name__)
 
 class DfuTransportBle(DfuTransport):
 
-    DEFAULT_TIMEOUT     = 20
-    RETRIES_NUMBER      = 3
+    # def open(self):
+    #
+    #     super().open()
+    #
+    #     self.dfu_adapter.open()
+    #     self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
+    #                                                     target_device_name = self.target_device_name,
+    #                                                     target_device_addr = self.target_device_addr)
+    #     self.__set_prn()
+    #
+    # def close(self):
+    #
+    #     # Get bonded status and BLE keyset from DfuAdapter
+    #     self.bonded = self.dfu_adapter.bonded
+    #     self.keyset = self.dfu_adapter.keyset
+    #
+    #     super().close()
+    #     self.dfu_adapter.close()
 
-    def __init__(self,
-                 serial_port,
-                 att_mtu,
-                 target_device_name=None,
-                 target_device_addr=None,
-                 baud_rate=1000000,
-                 prn=0):
-        super().__init__()
-        DFUAdapter.LOCAL_ATT_MTU = att_mtu
-        self.baud_rate          = baud_rate
-        self.serial_port        = serial_port
-        self.att_mtu            = att_mtu
-        self.target_device_name = target_device_name
-        self.target_device_addr = target_device_addr
-        self.dfu_adapter        = None
-        self.prn                = prn
+    def try_to_recover_before_init(self, select_cmd_response, init_packet):
+        """
+        validate select cmd response and send missing part if necessary.
+        return true if recovery was tried.
+        return false if recovery failed to validate or it wasn't necessary to recover.
+        """
+        if select_cmd_response['offset'] == 0 or select_cmd_response['offset'] > len(init_packet):
+            # There is no init packet or present init packet is too long.
+            return False
 
-        self.bonded             = False
-        self.keyset             = None
+        expected_crc = (binascii.crc32(init_packet[:select_cmd_response['offset']]) & 0xFFFFFFFF)
 
-    def open(self):
-        if self.dfu_adapter:
-            raise IllegalStateException('DFU Adapter is already open')
+        if expected_crc != select_cmd_response['crc']:
+            # Present init packet is invalid.
+            return False
 
-        super().open()
-        driver           = DfuBLEDriver(serial_port = self.serial_port,
-                                        baud_rate   = self.baud_rate)
-        adapter          = BLEAdapter(driver)
-        self.dfu_adapter = DFUAdapter(adapter=adapter, bonded=self.bonded, keyset=self.keyset)
-        self.dfu_adapter.open()
-        self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
-                                                        target_device_name = self.target_device_name,
-                                                        target_device_addr = self.target_device_addr)
-        self.__set_prn()
+        if len(init_packet) > select_cmd_response['offset']:
+            # Send missing part.
+            try:
+                self.__stream_data(data=init_packet[select_cmd_response['offset']:],
+                                   crc=expected_crc,
+                                   offset=select_cmd_response['offset'])
+            except ValidationException:
+                return False
 
-    def close(self):
-
-        # Get bonded status and BLE keyset from DfuAdapter
-        self.bonded = self.dfu_adapter.bonded
-        self.keyset = self.dfu_adapter.keyset
-
-        if not self.dfu_adapter:
-            raise IllegalStateException('DFU Adapter is already closed')
-        super().close()
-        self.dfu_adapter.close()
-        self.dfu_adapter = None
+        self.__execute()
+        return True
 
     def send_init_packet(self, init_packet):
-        def try_to_recover():
-            if response['offset'] == 0 or response['offset'] > len(init_packet):
-                # There is no init packet or present init packet is too long.
-                return False
-
-            expected_crc = (binascii.crc32(init_packet[:response['offset']]) & 0xFFFFFFFF)
-
-            if expected_crc != response['crc']:
-                # Present init packet is invalid.
-                return False
-
-            if len(init_packet) > response['offset']:
-                # Send missing part.
-                try:
-                    self.__stream_data(data     = init_packet[response['offset']:],
-                                       crc      = expected_crc,
-                                       offset   = response['offset'])
-                except ValidationException:
-                    return False
-
-            self.__execute()
-            return True
-
         response = self.__select_command()
+
         assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
-        if try_to_recover():
+        if self.try_to_recover_before_init(response, init_packet):
             return
 
         for r in range(DfuTransportBle.RETRIES_NUMBER):
@@ -102,6 +77,20 @@ class DfuTransportBle(DfuTransport):
             break
         else:
             raise DfuException("Failed to send init packet")
+
+    def __create_command(self, size):
+        self.__create_object(0x01, size)
+
+    def __create_data(self, size):
+        self.__create_object(0x02, size)
+
+    def __create_object(self, object_type, size):
+        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+                                            + list(struct.pack('<L', size)))
+        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
+
+
+    # --------------------
 
     def send_firmware(self, firmware):
         def try_to_recover():
@@ -157,16 +146,7 @@ class DfuTransportBle(DfuTransport):
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
         self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
 
-    def __create_command(self, size):
-        self.__create_object(0x01, size)
 
-    def __create_data(self, size):
-        self.__create_object(0x02, size)
-
-    def __create_object(self, object_type, size):
-        self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
-                                            + list(struct.pack('<L', size)))
-        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
     def __calculate_checksum(self):
         self.dfu_adapter.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
