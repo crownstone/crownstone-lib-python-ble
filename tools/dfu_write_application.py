@@ -36,13 +36,16 @@ def findDfuFile(path_to_file, filename):
 
     return None
 
-def overwriteDfuConfWithArgIfAvailable(conf, parsed_args, argname):
+def overwriteConfWithArgIfAvailable(conf, parsed_args, argname, section = None):
     """
     Overwrites the 'dfu' section of tool_config.json with commandline arguments when given argname is available.
     """
     arg_val = getattr(parsed_args, argname)
     if arg_val is not None:
-        conf['dfu'][argname] = arg_val
+        if section is not None:
+            conf[section][argname] = arg_val
+        else:
+            conf[argname] = arg_val
 
 def validateDfuConf(file_path, conf):
     """
@@ -96,15 +99,17 @@ def toolSetup():
         print("ERROR", e)
         quit()
 
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'zipFile')
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'binFile')
-    overwriteDfuConfWithArgIfAvailable(tool_config, parsed_args, 'datFile')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'zipFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'binFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'datFile', section='dfu')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'bleAddress')
 
     try:
         validateDfuConf(file_path, tool_config)
     except ValueError as e:
         print("ERROR dfu conf validation failed", e)
         quit()
+
 
     # create the library instance
     print(f'Initializing tool with bleAdapterAddress={tool_config["bleAdapterAddress"]}')
@@ -133,9 +138,13 @@ async def main(cs_ble, conf):
     # ----------------------------------------
     # set up the transport layer
     # ----------------------------------------
-    dfu_transport = CrownstoneDfuOverBle()
+
+    await cs_ble.connect(conf['bleAddress'])
     # TODO: any open/connect/register for notification call etc.
     # TODO: send goto DFU mode, wait, reconnect using MAC...
+
+    dfu_transport = CrownstoneDfuOverBle()
+
 
     # ----------------------------------------
     # send init packet
@@ -150,7 +159,6 @@ async def main(cs_ble, conf):
 
     dfu_transport.close()
 
-    # await core.connect(args.bleAddress)
     # chunkSize = 192
     # # await core._dev.uploadMicroapp(appData, appIndex, chunkSize)
 
