@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DfuTransportBle(DfuTransport):
+class DfuTransportBle:
 
     # def open(self):
     #
@@ -35,16 +35,19 @@ class DfuTransportBle(DfuTransport):
 
     RETRIES_NUMBER = 3
 
-    """
-    TODO(Arend): hook up __get_response to CrownstoneBLE notifications 
-    """
+
+    def get_notifications(self, timeout):
+        """
+        TODO(Arend): hook up for __get_response to BleHandler notifications
+        """
+        pass
 
     def write_cmd(self, uuid, data):
-        ## TODO (Arend)
+        ## TODO (Arend) hookup to BleHandler
         pass
 
     def write_req(self, uuid, data):
-        ## TODO (Arend)
+        ## TODO (Arend) hookup to BleHandler
         pass
 
 
@@ -245,7 +248,8 @@ class DfuTransportBle(DfuTransport):
             return next((key for key, val in list(dictionary.items()) if val == value), None)
 
         try:
-            resp = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
+            resp = self.get_notifications(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
+            # resp = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT) # <--- original nordic call
         except queue.Empty:
             raise DfuException('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE,
                                                                              operation)))
