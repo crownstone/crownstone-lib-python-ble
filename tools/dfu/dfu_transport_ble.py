@@ -1,9 +1,7 @@
 import queue
 import struct
 
-from tools.dfu.ble_uuid import *
-from tools.dfu.dfu_constants import DFUAdapter
-from tools.dfu.dfu_transport import DfuTransport, DfuEvent
+from tools.dfu.dfu_constants import DFUAdapter, DfuTransportBle
 from tools.dfu.dfu_exceptions import *
 
 
@@ -12,7 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DfuTransportBle:
+class CrownstoneDfuOverBle:
+    def __init__(self, crownstoneBle):
+        self.crownstone_ble = crownstoneBle
 
     # def open(self):
     #
@@ -35,6 +35,7 @@ class DfuTransportBle:
 
     RETRIES_NUMBER = 3
 
+    ### ----- the adapter layer for crownstone_ble -----
 
     def get_notifications(self, timeout):
         """
@@ -51,17 +52,56 @@ class DfuTransportBle:
         pass
 
 
-    ### -----
+    ### ----- utility forwarders that were pulled up from ble_adapter.py:classBLEAdapter
 
     def write_control_point(self, data):
         self.write_req(self.conn_handle, DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
-        # waits for result
+        # waits for result from gattc_evt_write_rsp and returns it
 
     def write_data_point(self, data):
         self.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)  ## ble_gattc_write  (... BLEGattWriteOperation.write_cmd ...)
-        # waits for result
+        # waits for result from on_gattc_evt_write_cmd_tx_complete and returns it
 
-    ### -------------------------
+    ### -------- main protocol methods -----------
+
+    def send_init_packet(self, init_packet):
+        response = self.__select_command()
+
+        assert len(init_packet) <= response['max_size'], 'Init command is too long'
+
+        if self.try_to_recover_before_send_init(response, init_packet):
+            return
+
+        for r in range(DfuTransportBle.RETRIES_NUMBER):
+            try:
+                self.__create_command(len(init_packet))
+                self.__stream_data(data=init_packet)
+                self.__execute()
+            except ValidationException:
+                pass
+            break
+        else:
+            raise DfuException("Failed to send init packet")
+
+    def send_firmware(self, firmware):
+        response = self.__select_data()
+        self.try_to_recover_before_send_firmware(response, firmware)
+
+        for i in range(response['offset'], len(firmware), response['max_size']):
+            data = firmware[i:i + response['max_size']]
+            for r in range(DfuTransportBle.RETRIES_NUMBER):
+                try:
+                    self.__create_data(len(data))
+                    response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
+                    self.__execute()
+                except ValidationException:
+                    pass
+                break
+            else:
+                raise DfuException("Failed to send firmware")
+            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
+
+    ### ------------ recovery methods -----------
 
     def try_to_recover_before_send_init(self, select_cmd_response, init_packet):
         """
@@ -91,38 +131,6 @@ class DfuTransportBle:
         self.__execute()
         return True
 
-    def send_init_packet(self, init_packet):
-        response = self.__select_command()
-
-        assert len(init_packet) <= response['max_size'], 'Init command is too long'
-
-        if self.try_to_recover_before_send_init(response, init_packet):
-            return
-
-        for r in range(DfuTransportBle.RETRIES_NUMBER):
-            try:
-                self.__create_command(len(init_packet))
-                self.__stream_data(data=init_packet)
-                self.__execute()
-            except ValidationException:
-                pass
-            break
-        else:
-            raise DfuException("Failed to send init packet")
-
-    def __create_command(self, size):
-        self.__create_object(0x01, size)
-
-    def __create_data(self, size):
-        self.__create_object(0x02, size)
-
-    def __create_object(self, object_type, size):
-        self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
-                                            + list(struct.pack('<L', size)))
-        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
-
-
-    # --------------------
 
     def try_to_recover_before_send_firmware(self, resp, firmw):
         if resp['offset'] == 0:
@@ -155,24 +163,6 @@ class DfuTransportBle:
         self.__execute()
         self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=resp['offset'])
 
-    def send_firmware(self, firmware):
-        response = self.__select_data()
-        self.try_to_recover_before_send_firmware(response, firmware)
-
-        for i in range(response['offset'], len(firmware), response['max_size']):
-            data = firmware[i:i+response['max_size']]
-            for r in range(DfuTransportBle.RETRIES_NUMBER):
-                try:
-                    self.__create_data(len(data))
-                    response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                    self.__execute()
-                except ValidationException:
-                    pass
-                break
-            else:
-                raise DfuException("Failed to send firmware")
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
-
     def validate_crc(self, crc, resp, offset):
         if crc != resp['crc']:
             raise ValidationException('Failed CRC validation.\n' \
@@ -181,27 +171,18 @@ class DfuTransportBle:
             raise ValidationException('Failed offset validation.\n' \
                                       + 'Expected: {} Received: {}.'.format(offset, resp['offset']))
 
-    def __stream_data(self, data, crc=0, offset=0):
-        logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+    ### -------------- nordic protocol commands -----------
 
-        current_pnr = 0
-        for i in range(0, len(data), self.dfu_adapter.packet_size):
-            to_transmit = data[i:i + self.dfu_adapter.packet_size]
-            self.write_cmd(DFUAdapter.DP_UUID, data)
-            crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
-            offset += len(to_transmit)
-            current_pnr += 1
-            if self.prn == current_pnr:
-                current_pnr = 0
-                response = self.__get_checksum_response()
-                self.validate_crc(crc, response, offset)
+    def __create_command(self, size):
+        self.__create_object(0x01, size)
 
-        response = self.__calculate_checksum()
-        self.validate_crc(crc, response, offset)
+    def __create_data(self, size):
+        self.__create_object(0x02, size)
 
-        return crc
-
-    ### -----------------------
+    def __create_object(self, object_type, size):
+        self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+                                            + list(struct.pack('<L', size)))
+        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
@@ -234,11 +215,27 @@ class DfuTransportBle:
         logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
         return {'max_size': max_size, 'offset': offset, 'crc': crc}
 
-    def __get_checksum_response(self):
-        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+    ### ------------ raw data communication ------------
 
-        (offset, crc) = struct.unpack('<II', bytearray(response))
-        return {'offset': offset, 'crc': crc}
+    def __stream_data(self, data, crc=0, offset=0):
+        logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
+
+        current_pnr = 0
+        for i in range(0, len(data), self.dfu_adapter.packet_size):
+            to_transmit = data[i:i + self.dfu_adapter.packet_size]
+            self.write_cmd(DFUAdapter.DP_UUID, data)
+            crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
+            offset += len(to_transmit)
+            current_pnr += 1
+            if self.prn == current_pnr:
+                current_pnr = 0
+                response = self.__get_checksum_response()
+                self.validate_crc(crc, response, offset)
+
+        response = self.__calculate_checksum()
+        self.validate_crc(crc, response, offset)
+
+        return crc
 
     def __get_response(self, operation):
         """
@@ -272,3 +269,9 @@ class DfuTransportBle:
             raise DfuException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
             raise DfuException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+
+    def __get_checksum_response(self):
+        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+
+        (offset, crc) = struct.unpack('<II', bytearray(response))
+        return {'offset': offset, 'crc': crc}

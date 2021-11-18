@@ -9,6 +9,7 @@ import datetime
 import pprint
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
+from tools.dfu.dfu_transport_ble import CrownstoneDfuOverBle
 from tools.util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
 tool_version = "1.0.0"
@@ -132,13 +133,9 @@ async def main(cs_ble, conf):
     # ----------------------------------------
     # set up the transport layer
     # ----------------------------------------
-    dfu_transport = None
-    # ble_backend = DfuTransportBle(serial_port=str(port),
-    #                               att_mtu=att_mtu,
-    #                               target_device_name=str(name),
-    #                               target_device_addr=str(address))
-    # ble_backend.register_events_callback(DfuEvent.PROGRESS_EVENT, update_progress)
-    # dfu = Dfu(zip_file_path=package, dfu_transport=ble_backend, connect_delay=connect_delay)
+    dfu_transport = CrownstoneDfuOverBle()
+    # TODO: any open/connect/register for notification call etc.
+    # TODO: send goto DFU mode, wait, reconnect using MAC...
 
     # ----------------------------------------
     # send init packet
