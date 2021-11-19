@@ -167,11 +167,11 @@ if __name__ == "__main__":
     # load the encryption keys into the library
     loadKeysFromConfig(cs_ble, conf)
 
+    loop = asyncio.get_event_loop()
     try:
         # asyncio.run does not work here.
-        loop = asyncio.get_event_loop()
         loop.run_until_complete(main(cs_ble, conf))
     except KeyboardInterrupt:
         print("Stopping.")
     finally:
-        terminate(cs_ble)
+        loop.run_until_complete(terminate(cs_ble))
