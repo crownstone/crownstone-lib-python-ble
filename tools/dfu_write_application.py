@@ -127,7 +127,7 @@ async def main(cs_ble, conf):
     # set up the transport layer
     # ----------------------------------------
 
-    await cs_ble.connect(conf['bleAddress'])
+    await cs_ble.connect(conf['bleAddress'],timeout=10)
     # TODO: any open/connect/register for notification call etc.
     # TODO: send goto DFU mode, wait, reconnect using MAC...
 
