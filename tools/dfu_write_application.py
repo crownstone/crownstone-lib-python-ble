@@ -123,18 +123,34 @@ async def main(cs_ble, conf):
     print("Main")
     printer.pprint(conf)
 
-    # ----------------------------------------
-    # set up the transport layer
-    # ----------------------------------------
+    # -----------------------------------------
+    # connect and put target device in dfu mode
+    # -----------------------------------------
 
     await cs_ble.connect(conf['bleAddress'],timeout=10)
+    print("connected to target device")
+    await cs_ble.control.putInDfuMode()
+    print("target device command go to DFU sent")
+    await cs_ble.ble.waitForPeripheralToDisconnect()
+    print("target device disconnected")
+    await cs_ble.connect(conf['bleAddress'],timeout=10) # reconnect
+    print("target device reconnected and should now be ready for dfu:")
+    print("services available:", cs_ble.ble.activeClient.services)
+    # verify DFU mode:
+    #           BleHandler.hasCharacteristic...
+    #           BleHandler.hasService...
+
     # TODO: any open/connect/register for notification call etc.
-    # TODO: send goto DFU mode, wait, reconnect using MAC...
 
-    dfu_transport = CrownstoneDfuOverBle(cs_ble)
-
+    while True:
+        await asyncio.sleep(1)
+        print("main loop sleeps")
 
     # ----------------------------------------
+    # execute dfu
+    # ----------------------------------------
+    dfu_transport = CrownstoneDfuOverBle(cs_ble)
+
     # send init packet
     with open(conf['dfu']['datFile'], 'rb') as f:
         fileContent = f.read()

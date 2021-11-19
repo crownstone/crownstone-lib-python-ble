@@ -43,6 +43,7 @@ class CrownstoneDfuOverBle:
 
     def write_cmd(self, uuid, data):
         ## TODO (Arend) hookup to BleHandler
+        ## writeToCharacteristicWithoutEncryption
         pass
 
     def write_req(self, uuid, data):
