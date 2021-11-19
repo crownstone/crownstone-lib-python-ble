@@ -33,8 +33,6 @@ class CrownstoneDfuOverBle:
     #     super().close()
     #     self.dfu_adapter.close()
 
-    RETRIES_NUMBER = 3
-
     ### ----- the adapter layer for crownstone_ble -----
 
     def get_notifications(self, timeout):
@@ -55,11 +53,11 @@ class CrownstoneDfuOverBle:
     ### ----- utility forwarders that were pulled up from ble_adapter.py:classBLEAdapter
 
     def write_control_point(self, data):
-        self.write_req(self.conn_handle, DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
+        self.write_req(DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
         # waits for result from gattc_evt_write_rsp and returns it
 
     def write_data_point(self, data):
-        self.write_cmd(self.conn_handle, DFUAdapter.DP_UUID, data)  ## ble_gattc_write  (... BLEGattWriteOperation.write_cmd ...)
+        self.write_cmd(DFUAdapter.DP_UUID, data)  ## ble_gattc_write  (... BLEGattWriteOperation.write_cmd ...)
         # waits for result from on_gattc_evt_write_cmd_tx_complete and returns it
 
     ### -------- main protocol methods -----------

@@ -22,6 +22,9 @@ class DFUAdapter:
 
 ##### protocol constants
 class DfuTransportBle:
+    DEFAULT_TIMEOUT     = 20
+    RETRIES_NUMBER      = 3
+
     OP_CODE = {
         'CreateObject'          : 0x01,
         'SetPRN'                : 0x02,

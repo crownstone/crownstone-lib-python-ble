@@ -131,7 +131,7 @@ async def main(cs_ble, conf):
     # TODO: any open/connect/register for notification call etc.
     # TODO: send goto DFU mode, wait, reconnect using MAC...
 
-    dfu_transport = CrownstoneDfuOverBle()
+    dfu_transport = CrownstoneDfuOverBle(cs_ble)
 
 
     # ----------------------------------------
