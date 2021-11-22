@@ -97,6 +97,21 @@ class BLEUUID(object):
     def __hash__(self):
         return hash(self.value * (self.base.type or 1))
 
+    def toString(self):
+        """
+        converts to crownstone string format
+        """
+        s = "".join(["{0:02x}".format(x) for x in self.base.base])
+        val = ""
+        if isinstance(self.value, BLEUUID.Standard):
+            val = "{0:04x}".format(self.value.value)
+        else:
+            val = "{0:04x}".format(self.value)
+
+
+        hyphenated = "-".join(["".join([s[0:4], val[0:4]]),s[8:12], s[12:16], s[16:20], s[20:32]])
+        return hyphenated
+
     # @classmethod
     # def from_c(cls, uuid):
     #     return cls(value=uuid.uuid, base=BLEUUIDBase.from_c(uuid))

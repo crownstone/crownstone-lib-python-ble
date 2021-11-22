@@ -9,6 +9,7 @@ import datetime
 import pprint
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
+from tools.dfu.dfu_constants import DFUAdapter
 from tools.dfu.dfu_transport_ble import CrownstoneDfuOverBle
 from tools.util.config import getToolConfig, loadKeysFromConfig, setupDefaultCommandLineArguments, macFilterPassed
 
@@ -127,15 +128,28 @@ async def main(cs_ble, conf):
     # connect and put target device in dfu mode
     # -----------------------------------------
 
+    print("--- DFU constants: ---")
+    print(DFUAdapter.BLE_DFU_BUTTONLESS_CHAR_UUID)
+    print(DFUAdapter.BLE_DFU_BUTTONLESS_BONDED_CHAR_UUID)
+    print(DFUAdapter.SERVICE_CHANGED_UUID)
+    print("CP_UUID: ", DFUAdapter.CP_UUID.toString())
+    print("DP_UUID: ", DFUAdapter.DP_UUID.toString())
+    print("----------------------")
+
     await cs_ble.connect(conf['bleAddress'],timeout=10)
     print("connected to target device")
     await cs_ble.control.putInDfuMode()
     print("target device command go to DFU sent")
     await cs_ble.ble.waitForPeripheralToDisconnect()
     print("target device disconnected")
-    await cs_ble.connect(conf['bleAddress'],timeout=10) # reconnect
+    await cs_ble.connect(conf['bleAddress'],timeout=10, ignoreEncryption=True) # reconnect
     print("target device reconnected and should now be ready for dfu:")
     print("services available:", cs_ble.ble.activeClient.services)
+    print("characteristics available:", cs_ble.ble.activeClient.characteristics)
+
+    print("has dfu service:", cs_ble.ble.hasCharacteristic(DFUAdapter.CP_UUID.toString()))
+    print("has dfu service:", cs_ble.ble.hasCharacteristic(DFUAdapter.DP_UUID.toString()))
+
     # verify DFU mode:
     #           BleHandler.hasCharacteristic...
     #           BleHandler.hasService...

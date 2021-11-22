@@ -18,6 +18,7 @@ from crownstone_ble.core.modules.Validator import Validator
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.setLevel(logging.DEBUG)
 
 CCCD_UUID = 0x2902
 
