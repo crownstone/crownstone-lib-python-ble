@@ -103,7 +103,6 @@ class CrownstoneDfuOverBle:
                 break
             else:
                 raise DfuException("Failed to send firmware")
-            self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=len(data))
 
     ### ------------ recovery methods -----------
 
@@ -165,7 +164,6 @@ class CrownstoneDfuOverBle:
                 return
 
         self.__execute()
-        self._send_event(event_type=DfuEvent.PROGRESS_EVENT, progress=resp['offset'])
 
     def validate_crc(self, crc, resp, offset):
         if crc != resp['crc']:
