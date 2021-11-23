@@ -161,10 +161,12 @@ async def main(cs_ble, conf):
     # ----------------------------------------
     dfu_transport = CrownstoneDfuOverBle(cs_ble)
 
+    await dfu_transport.open()
+
     # send init packet
     with open(conf['dfu']['datFile'], 'rb') as f:
         fileContent = f.read()
-        dfu_transport.send_init_packet(fileContent)
+        await dfu_transport.send_init_packet(fileContent)
 
     while True:
         await asyncio.sleep(1)
@@ -173,9 +175,9 @@ async def main(cs_ble, conf):
     # send firmware file
     with open(conf['dfu']['binFile'], 'rb') as f:
         fileContent = f.read()
-        dfu_transport.send_firmware(fileContent)
+        await dfu_transport.send_firmware(fileContent)
 
-    dfu_transport.close()
+    await dfu_transport.close()
 
     # chunkSize = 192
     # # await core._dev.uploadMicroapp(appData, appIndex, chunkSize)

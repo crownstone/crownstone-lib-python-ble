@@ -13,29 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 class CrownstoneDfuOverBle:
+    ServiceUuid = "CrownstoneDfuOverBle WriteCommand" # no clue what this is supposed to be
+
+    ### ----- init and 'open/close'-ing -----
+
     def __init__(self, crownstoneBle):
         self.crownstone_ble = crownstoneBle
 
-    # def open(self):
-    #
-    #     super().open()
-    #
-    #     self.dfu_adapter.open()
-    #     self.target_device_name, self.target_device_addr = self.dfu_adapter.connect(
-    #                                                     target_device_name = self.target_device_name,
-    #                                                     target_device_addr = self.target_device_addr)
-    #     self.__set_prn()
-    #
-    # def close(self):
-    #
-    #     # Get bonded status and BLE keyset from DfuAdapter
-    #     self.bonded = self.dfu_adapter.bonded
-    #     self.keyset = self.dfu_adapter.keyset
-    #
-    #     super().close()
-    #     self.dfu_adapter.close()
+    async def open(self):
+        await self.__set_prn()
 
-    ServiceUuid = "CrownstoneDfuOverBle WriteCommand" # no clue what this is supposed to be
+    async def close(self): # (async because open is async)
+        pass
+
 
     ### ----- the adapter layer for crownstone_ble -----
 
@@ -68,36 +58,36 @@ class CrownstoneDfuOverBle:
 
     ### -------- main protocol methods -----------
 
-    def send_init_packet(self, init_packet):
-        response = self.__select_command()
+    async def send_init_packet(self, init_packet):
+        response = await self.__select_command()
 
         assert len(init_packet) <= response['max_size'], 'Init command is too long'
 
-        if self.try_to_recover_before_send_init(response, init_packet):
+        if await self.try_to_recover_before_send_init(response, init_packet):
             return
 
         for r in range(DfuTransportBle.RETRIES_NUMBER):
             try:
-                self.__create_command(len(init_packet))
-                self.__stream_data(data=init_packet)
-                self.__execute()
+                await self.__create_command(len(init_packet))
+                await self.__stream_data(data=init_packet)
+                await self.__execute()
             except ValidationException:
                 pass
             break
         else:
             raise DfuException("Failed to send init packet")
 
-    def send_firmware(self, firmware):
+    async def send_firmware(self, firmware):
         response = self.__select_data()
-        self.try_to_recover_before_send_firmware(response, firmware)
+        await self.try_to_recover_before_send_firmware(response, firmware)
 
         for i in range(response['offset'], len(firmware), response['max_size']):
             data = firmware[i:i + response['max_size']]
             for r in range(DfuTransportBle.RETRIES_NUMBER):
                 try:
-                    self.__create_data(len(data))
-                    response['crc'] = self.__stream_data(data=data, crc=response['crc'], offset=i)
-                    self.__execute()
+                    await self.__create_data(len(data))
+                    response['crc'] = await self.__stream_data(data=data, crc=response['crc'], offset=i)
+                    await self.__execute()
                 except ValidationException:
                     pass
                 break
@@ -106,7 +96,7 @@ class CrownstoneDfuOverBle:
 
     ### ------------ recovery methods -----------
 
-    def try_to_recover_before_send_init(self, select_cmd_response, init_packet):
+    async def try_to_recover_before_send_init(self, select_cmd_response, init_packet):
         """
         validate select cmd response and send missing part if necessary.
         return true if recovery was tried.
@@ -125,17 +115,17 @@ class CrownstoneDfuOverBle:
         if len(init_packet) > select_cmd_response['offset']:
             # Send missing part.
             try:
-                self.__stream_data(data=init_packet[select_cmd_response['offset']:],
+                await self.__stream_data(data=init_packet[select_cmd_response['offset']:],
                                    crc=expected_crc,
                                    offset=select_cmd_response['offset'])
             except ValidationException:
                 return False
 
-        self.__execute()
+        await self.__execute()
         return True
 
 
-    def try_to_recover_before_send_firmware(self, resp, firmw):
+    async def try_to_recover_before_send_firmware(self, resp, firmw):
         if resp['offset'] == 0:
             # Nothing to recover
             return
@@ -153,7 +143,7 @@ class CrownstoneDfuOverBle:
             # Send rest of the page.
             try:
                 to_send = firmw[resp['offset']: resp['offset'] + resp['max_size'] - remainder]
-                resp['crc'] = self.__stream_data(data=to_send,
+                resp['crc'] = await self.__stream_data(data=to_send,
                                                      crc=resp['crc'],
                                                      offset=resp['offset'])
                 resp['offset'] += len(to_send)
@@ -163,7 +153,7 @@ class CrownstoneDfuOverBle:
                 resp['crc'] = binascii.crc32(firmw[:resp['offset']]) & 0xFFFFFFFF
                 return
 
-        self.__execute()
+        await self.__execute()
 
     def validate_crc(self, crc, resp, offset):
         if crc != resp['crc']:
@@ -175,40 +165,40 @@ class CrownstoneDfuOverBle:
 
     ### -------------- nordic protocol commands -----------
 
-    def __create_command(self, size):
-        self.__create_object(0x01, size)
+    async def __create_command(self, size):
+        await self.__create_object(0x01, size)
 
-    def __create_data(self, size):
-        self.__create_object(0x02, size)
+    async def __create_data(self, size):
+        await self.__create_object(0x02, size)
 
-    def __create_object(self, object_type, size):
+    async def __create_object(self, object_type, size):
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
                                             + list(struct.pack('<L', size)))
         self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CreateObject'])
 
-    def __set_prn(self):
+    async def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
         self.__parse_response(raw_response, DfuTransportBle.OP_CODE['SetPRN'])
 
-    def __calculate_checksum(self):
+    async def __calculate_checksum(self):
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
         response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
-    def __execute(self):
+    async def __execute(self):
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['Execute']])
         self.__parse_response(raw_response, DfuTransportBle.OP_CODE['Execute'])
 
-    def __select_command(self):
-        return self.__select_object(0x01)
+    async def __select_command(self):
+        return await self.__select_object(0x01)
 
-    def __select_data(self):
-        return self.__select_object(0x02)
+    async def __select_data(self):
+        return await self.__select_object(0x02)
 
-    def __select_object(self, object_type):
+    async def __select_object(self, object_type):
         logger.debug("BLE: Selecting Object: type:{}".format(object_type))
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
         response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['ReadObject'])
@@ -219,7 +209,7 @@ class CrownstoneDfuOverBle:
 
     ### ------------ raw data communication ------------
 
-    def __stream_data(self, data, crc=0, offset=0):
+    async def __stream_data(self, data, crc=0, offset=0):
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
 
         current_pnr = 0
@@ -235,7 +225,7 @@ class CrownstoneDfuOverBle:
                 response = self.__parse_checksum_response(raw_response)
                 self.validate_crc(crc, response, offset)
 
-        response = self.__calculate_checksum()
+        response = await self.__calculate_checksum()
         self.validate_crc(crc, response, offset)
 
         return crc
