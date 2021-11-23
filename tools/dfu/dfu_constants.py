@@ -17,13 +17,13 @@ class DFUAdapter:
 
     CONNECTION_ATTEMPTS   = 3
     ERROR_CODE_POS        = 2
-    LOCAL_ATT_MTU         = 247
+    LOCAL_ATT_MTU         = 200 # used to be 247 in Nordic, what size should it be?
 
 
 ##### protocol constants
 class DfuTransportBle:
     DEFAULT_TIMEOUT     = 20
-    RETRIES_NUMBER      = 3
+    RETRIES_NUMBER      = 5
 
     OP_CODE = {
         'CreateObject'          : 0x01,

@@ -19,6 +19,7 @@ class CrownstoneDfuOverBle:
 
     def __init__(self, crownstoneBle):
         self.crownstone_ble = crownstoneBle
+        self.prn = 0 # default from nordic
 
     async def open(self):
         await self.__set_prn()
@@ -35,9 +36,9 @@ class CrownstoneDfuOverBle:
                                                     char_uuid,
                                                     data)
         try:
-            result = await self.core.ble.setupSingleNotification(
+            result = await self.crownstone_ble.ble.setupSingleNotification(
                                                         CrownstoneDfuOverBle.ServiceUuid,
-                                                        DFUAdapter.CP_UUID,
+                                                        char_uuid,
                                                         writemethod,
                                                         DfuTransportBle.DEFAULT_TIMEOUT)
         except CrownstoneBleException as e:
@@ -51,10 +52,10 @@ class CrownstoneDfuOverBle:
     ### ----- utility forwarders that were pulled up from ble_adapter.py:classBLEAdapter
 
     async def write_control_point(self, data):
-        return await self.writeCharacteristicForResponse(DFUAdapter.CP_UUID, data)
+        return await self.writeCharacteristicForResponse(DFUAdapter.CP_UUID.toString(), data)
 
     async def write_data_point(self, data):
-        return await self.writeCharacteristicForResponse(DFUAdapter.DP_UUID, data)
+        return await self.writeCharacteristicForResponse(DFUAdapter.DP_UUID.toString(), data)
 
     ### -------- main protocol methods -----------
 
@@ -214,8 +215,8 @@ class CrownstoneDfuOverBle:
 
         current_pnr = 0
 
-        for i in range(0, len(data), self.dfu_adapter.packet_size):
-            to_transmit = data[i:i + self.dfu_adapter.packet_size]
+        for i in range(0, len(data), DFUAdapter.LOCAL_ATT_MTU):
+            to_transmit = data[i:i + DFUAdapter.LOCAL_ATT_MTU]
             raw_response = await self.write_data_point(data)
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
