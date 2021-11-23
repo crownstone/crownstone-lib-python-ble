@@ -184,25 +184,25 @@ class CrownstoneDfuOverBle:
         self.__create_object(0x02, size)
 
     def __create_object(self, object_type, size):
-        self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
+        raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
                                             + list(struct.pack('<L', size)))
-        self.__parse_response(DfuTransportBle.OP_CODE['CreateObject'])
+        self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CreateObject'])
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
-        self.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
-        self.__parse_response(DfuTransportBle.OP_CODE['SetPRN'])
+        raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
+        self.__parse_response(raw_response, DfuTransportBle.OP_CODE['SetPRN'])
 
     def __calculate_checksum(self):
-        self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
-        response = self.__parse_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
+        response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
     def __execute(self):
-        self.write_control_point([DfuTransportBle.OP_CODE['Execute']])
-        self.__parse_response(DfuTransportBle.OP_CODE['Execute'])
+        raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['Execute']])
+        self.__parse_response(raw_response, DfuTransportBle.OP_CODE['Execute'])
 
     def __select_command(self):
         return self.__select_object(0x01)
@@ -212,8 +212,8 @@ class CrownstoneDfuOverBle:
 
     def __select_object(self, object_type):
         logger.debug("BLE: Selecting Object: type:{}".format(object_type))
-        self.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
-        response = self.__parse_response(DfuTransportBle.OP_CODE['ReadObject'])
+        raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
+        response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['ReadObject'])
 
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
@@ -228,13 +228,13 @@ class CrownstoneDfuOverBle:
 
         for i in range(0, len(data), self.dfu_adapter.packet_size):
             to_transmit = data[i:i + self.dfu_adapter.packet_size]
-            self.write_data_point(data)
+            raw_response = await self.write_data_point(data)
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
             if self.prn == current_pnr:
                 current_pnr = 0
-                response = self.__get_checksum_response()
+                response = self.__parse_checksum_response(raw_response)
                 self.validate_crc(crc, response, offset)
 
         response = self.__calculate_checksum()
@@ -242,37 +242,37 @@ class CrownstoneDfuOverBle:
 
         return crc
 
-    def __parse_response(self, resp, operation):
+    def __parse_response(self, raw_response, operation):
         """
-        waits for a notify of the device with OP_CODE == operation and return if possible.
+        Parses a raw response (notification) and checks for errors.
         """
         def get_dict_key(dictionary, value):
             return next((key for key, val in list(dictionary.items()) if val == value), None)
 
-        if resp is None:
+        if raw_response is None:
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "cannot parse empty response")
 
-        if resp[0] != DfuTransportBle.OP_CODE['Response']:
-            raise DfuException('No Response: 0x{:02X}'.format(resp[0]))
+        if raw_response[0] != DfuTransportBle.OP_CODE['Response']:
+            raise DfuException('No Response: 0x{:02X}'.format(raw_response[0]))
 
-        if resp[1] != operation:
+        if raw_response[1] != operation:
             raise DfuException('Unexpected Executed OP_CODE.\n' \
-                               + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
+                               + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, raw_response[1]))
 
-        if resp[2] == DfuTransportBle.RES_CODE['Success']:
-            return resp[3:]
+        if raw_response[2] == DfuTransportBle.RES_CODE['Success']:
+            return raw_response[3:]
 
-        elif resp[2] == DfuTransportBle.RES_CODE['ExtendedError']:
+        elif raw_response[2] == DfuTransportBle.RES_CODE['ExtendedError']:
             try:
-                data = DfuTransportBle.EXT_ERROR_CODE[resp[3]]
+                data = DfuTransportBle.EXT_ERROR_CODE[raw_response[3]]
             except IndexError:
-                data = "Unsupported extended error type {}".format(resp[3])
-            raise DfuException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
+                data = "Unsupported extended error type {}".format(raw_response[3])
+            raise DfuException('Extended Error 0x{:02X}: {}'.format(raw_response[3], data))
         else:
-            raise DfuException('Response Code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, resp[2])))
+            raise DfuException('Response Code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, raw_response[2])))
 
-    def __get_checksum_response(self):
-        response = self.__parse_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+    def __parse_checksum_response(self, raw_response):
+        response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
