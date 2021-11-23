@@ -1,6 +1,8 @@
 import queue
 import struct
 
+from crownstone_ble.Exceptions import BleError
+from crownstone_core.Exceptions import CrownstoneBleException
 from tools.dfu.dfu_constants import DFUAdapter, DfuTransportBle
 from tools.dfu.dfu_exceptions import *
 
@@ -33,33 +35,36 @@ class CrownstoneDfuOverBle:
     #     super().close()
     #     self.dfu_adapter.close()
 
+    ServiceUuid = "CrownstoneDfuOverBle WriteCommand" # no clue what this is supposed to be
+
     ### ----- the adapter layer for crownstone_ble -----
 
-    def get_notifications(self, timeout):
-        """
-        TODO(Arend): hook up for __get_response to BleHandler notifications
-        """
-        pass
+    async def writeCharacteristicForResponse(self, char_uuid, data):
+        writemethod = lambda: self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
+                                                    CrownstoneDfuOverBle.ServiceUuid,
+                                                    char_uuid,
+                                                    data)
+        try:
+            result = await self.core.ble.setupSingleNotification(
+                                                        CrownstoneDfuOverBle.ServiceUuid,
+                                                        DFUAdapter.CP_UUID,
+                                                        writemethod,
+                                                        DfuTransportBle.DEFAULT_TIMEOUT)
+        except CrownstoneBleException as e:
+            print("failed to execute writeCharacteristicForResponse")
+            print(e)
+            raise
 
-    def write_cmd(self, uuid, data):
-        ## TODO (Arend) hookup to BleHandler
-        ## writeToCharacteristicWithoutEncryption
-        pass
-
-    def write_req(self, uuid, data):
-        ## TODO (Arend) hookup to BleHandler
-        pass
+        return result
 
 
     ### ----- utility forwarders that were pulled up from ble_adapter.py:classBLEAdapter
 
-    def write_control_point(self, data):
-        self.write_req(DFUAdapter.CP_UUID, data) ## ble_gattc_write (... BLEGattWriteOperation.write_req ...)
-        # waits for result from gattc_evt_write_rsp and returns it
+    async def write_control_point(self, data):
+        return await self.writeCharacteristicForResponse(DFUAdapter.CP_UUID, data)
 
-    def write_data_point(self, data):
-        self.write_cmd(DFUAdapter.DP_UUID, data)  ## ble_gattc_write  (... BLEGattWriteOperation.write_cmd ...)
-        # waits for result from on_gattc_evt_write_cmd_tx_complete and returns it
+    async def write_data_point(self, data):
+        return await self.writeCharacteristicForResponse(DFUAdapter.DP_UUID, data)
 
     ### -------- main protocol methods -----------
 
@@ -181,23 +186,23 @@ class CrownstoneDfuOverBle:
     def __create_object(self, object_type, size):
         self.write_control_point([DfuTransportBle.OP_CODE['CreateObject'], object_type]\
                                             + list(struct.pack('<L', size)))
-        self.__get_response(DfuTransportBle.OP_CODE['CreateObject'])
+        self.__parse_response(DfuTransportBle.OP_CODE['CreateObject'])
 
     def __set_prn(self):
         logger.debug("BLE: Set Packet Receipt Notification {}".format(self.prn))
         self.write_control_point([DfuTransportBle.OP_CODE['SetPRN']] + list(struct.pack('<H', self.prn)))
-        self.__get_response(DfuTransportBle.OP_CODE['SetPRN'])
+        self.__parse_response(DfuTransportBle.OP_CODE['SetPRN'])
 
     def __calculate_checksum(self):
         self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
-        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        response = self.__parse_response(DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}
 
     def __execute(self):
         self.write_control_point([DfuTransportBle.OP_CODE['Execute']])
-        self.__get_response(DfuTransportBle.OP_CODE['Execute'])
+        self.__parse_response(DfuTransportBle.OP_CODE['Execute'])
 
     def __select_command(self):
         return self.__select_object(0x01)
@@ -208,7 +213,7 @@ class CrownstoneDfuOverBle:
     def __select_object(self, object_type):
         logger.debug("BLE: Selecting Object: type:{}".format(object_type))
         self.write_control_point([DfuTransportBle.OP_CODE['ReadObject'], object_type])
-        response = self.__get_response(DfuTransportBle.OP_CODE['ReadObject'])
+        response = self.__parse_response(DfuTransportBle.OP_CODE['ReadObject'])
 
         (max_size, offset, crc)= struct.unpack('<III', bytearray(response))
         logger.debug("BLE: Object selected: max_size:{} offset:{} crc:{}".format(max_size, offset, crc))
@@ -220,9 +225,10 @@ class CrownstoneDfuOverBle:
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
 
         current_pnr = 0
+
         for i in range(0, len(data), self.dfu_adapter.packet_size):
             to_transmit = data[i:i + self.dfu_adapter.packet_size]
-            self.write_cmd(DFUAdapter.DP_UUID, data)
+            self.write_data_point(data)
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
@@ -236,19 +242,15 @@ class CrownstoneDfuOverBle:
 
         return crc
 
-    def __get_response(self, operation):
+    def __parse_response(self, resp, operation):
         """
         waits for a notify of the device with OP_CODE == operation and return if possible.
         """
         def get_dict_key(dictionary, value):
             return next((key for key, val in list(dictionary.items()) if val == value), None)
 
-        try:
-            resp = self.get_notifications(timeout=DfuTransportBle.DEFAULT_TIMEOUT)
-            # resp = self.dfu_adapter.notifications_q.get(timeout=DfuTransportBle.DEFAULT_TIMEOUT) # <--- original nordic call
-        except queue.Empty:
-            raise DfuException('Timeout: operation - {}'.format(get_dict_key(DfuTransportBle.OP_CODE,
-                                                                             operation)))
+        if resp is None:
+            raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "cannot parse empty response")
 
         if resp[0] != DfuTransportBle.OP_CODE['Response']:
             raise DfuException('No Response: 0x{:02X}'.format(resp[0]))
@@ -257,20 +259,20 @@ class CrownstoneDfuOverBle:
             raise DfuException('Unexpected Executed OP_CODE.\n' \
                                + 'Expected: 0x{:02X} Received: 0x{:02X}'.format(operation, resp[1]))
 
-        if resp[2] == DfuTransport.RES_CODE['Success']:
+        if resp[2] == DfuTransportBle.RES_CODE['Success']:
             return resp[3:]
 
-        elif resp[2] == DfuTransport.RES_CODE['ExtendedError']:
+        elif resp[2] == DfuTransportBle.RES_CODE['ExtendedError']:
             try:
-                data = DfuTransport.EXT_ERROR_CODE[resp[3]]
+                data = DfuTransportBle.EXT_ERROR_CODE[resp[3]]
             except IndexError:
                 data = "Unsupported extended error type {}".format(resp[3])
             raise DfuException('Extended Error 0x{:02X}: {}'.format(resp[3], data))
         else:
-            raise DfuException('Response Code {}'.format(get_dict_key(DfuTransport.RES_CODE, resp[2])))
+            raise DfuException('Response Code {}'.format(get_dict_key(DfuTransportBle.RES_CODE, resp[2])))
 
     def __get_checksum_response(self):
-        response = self.__get_response(DfuTransportBle.OP_CODE['CalcChecSum'])
+        response = self.__parse_response(DfuTransportBle.OP_CODE['CalcChecSum'])
 
         (offset, crc) = struct.unpack('<II', bytearray(response))
         return {'offset': offset, 'crc': crc}

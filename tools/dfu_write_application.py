@@ -156,10 +156,6 @@ async def main(cs_ble, conf):
 
     # TODO: any open/connect/register for notification call etc.
 
-    while True:
-        await asyncio.sleep(1)
-        print("main loop sleeps")
-
     # ----------------------------------------
     # execute dfu
     # ----------------------------------------
@@ -169,6 +165,10 @@ async def main(cs_ble, conf):
     with open(conf['dfu']['datFile'], 'rb') as f:
         fileContent = f.read()
         dfu_transport.send_init_packet(fileContent)
+
+    while True:
+        await asyncio.sleep(1)
+        print("main loop sleeps")
 
     # send firmware file
     with open(conf['dfu']['binFile'], 'rb') as f:
