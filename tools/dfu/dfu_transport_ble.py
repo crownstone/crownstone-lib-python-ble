@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class CrownstoneDfuOverBle:
-    ServiceUuid = "CrownstoneDfuOverBle WriteCommand" # no clue what this is supposed to be
+    ServiceUuid = 0xFE59 # "CrownstoneDfuOverBle WriteCommand" # no clue what this is supposed to be
 
     ### ----- init and 'open/close'-ing -----
 
