@@ -1,3 +1,4 @@
+import asyncio
 import queue
 import struct
 
@@ -30,13 +31,19 @@ class CrownstoneDfuOverBle:
 
     ### ----- the adapter layer for crownstone_ble -----
 
+    async def writeCharacteristicWithoutResponse(self, char_uuid, data):
+        await self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
+            CrownstoneDfuOverBle.ServiceUuid,
+            char_uuid,
+            data)
+
     async def writeCharacteristicForResponse(self, char_uuid, data):
         writemethod = lambda: self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
                                                     CrownstoneDfuOverBle.ServiceUuid,
                                                     char_uuid,
                                                     data)
         try:
-            result = await self.crownstone_ble.ble.setupSingleNotification(
+            result = await self.receiveRawNotification(
                                                         CrownstoneDfuOverBle.ServiceUuid,
                                                         char_uuid,
                                                         writemethod,
@@ -48,6 +55,45 @@ class CrownstoneDfuOverBle:
 
         return result
 
+    async def receiveRawNotification(self, serviceUUID, characteristicUUID, writeCommand, timeout=None):
+        """
+        adapted from BleHandler.setupSingleNotification, which uses a wrapper (notificationDelegate) that is too thick.
+        """
+        if timeout is None:
+            timeout = 12.5
+
+        notificationReceived = False
+        notificationData = None
+
+        def onReceiveNotification(uuid, data):
+            nonlocal notificationReceived
+            nonlocal notificationData
+
+            notificationReceived = True
+            notificationData = data
+
+        ble_client = self.crownstone_ble.ble.activeClient
+
+        # setup the collecting of the notification data.
+        await ble_client.subscribeNotifications(characteristicUUID, onReceiveNotification)
+
+        # execute the command that will trigger the notifications
+        await writeCommand()
+
+        # wait for the results to come in.
+        loopCount = 0
+        pollInterval = 0.1
+        while not notificationReceived and loopCount < (timeout / pollInterval):
+            await asyncio.sleep(pollInterval)
+            loopCount += 1
+
+        ble_client.unsubscribeNotifications(characteristicUUID)
+
+        if notificationData is None:
+            raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
+
+        return notificationData
+
 
     ### ----- utility forwarders that were pulled up from ble_adapter.py:classBLEAdapter
 
@@ -55,7 +101,7 @@ class CrownstoneDfuOverBle:
         return await self.writeCharacteristicForResponse(DFUAdapter.CP_UUID.toString(), data)
 
     async def write_data_point(self, data):
-        return await self.writeCharacteristicForResponse(DFUAdapter.DP_UUID.toString(), data)
+        return await self.writeCharacteristicWithoutResponse(DFUAdapter.DP_UUID.toString(), data)
 
     ### -------- main protocol methods -----------
 
@@ -240,6 +286,8 @@ class CrownstoneDfuOverBle:
 
         if raw_response is None:
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "cannot parse empty response")
+
+        print("raw response to operation {0}:".format(operation),", ".join(["0x{0:02X}".format(x) for x in raw_response]))
 
         if raw_response[0] != DfuTransportBle.OP_CODE['Response']:
             raise DfuException('No Response: 0x{:02X}'.format(raw_response[0]))

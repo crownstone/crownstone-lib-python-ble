@@ -7,6 +7,10 @@ import logging
 from os import path
 import datetime
 import pprint
+import subprocess
+
+
+from crownstone_core.Exceptions import CrownstoneBleException
 
 from crownstone_ble import CrownstoneBle, BleEventBus, BleTopics
 from tools.dfu.dfu_constants import DFUAdapter
@@ -118,6 +122,23 @@ async def terminate(cs_ble):
     await cs_ble.disconnect()
     await cs_ble.shutDown()
 
+
+def validateDeviceIsInDfu(cs_ble):
+    print("checking dfu characteristics")
+    print("services available:", cs_ble.ble.activeClient.services)
+    print("characteristics available:", cs_ble.ble.activeClient.characteristics)
+    retval = True
+    if not cs_ble.ble.hasCharacteristic(DFUAdapter.CP_UUID.toString()):
+        print("dfu control point characteristic missing :", DFUAdapter.CP_UUID.toString())
+        retval = False
+    if not cs_ble.ble.hasCharacteristic(DFUAdapter.DP_UUID.toString()):
+        print("dfu data point characteristic missing :", DFUAdapter.DP_UUID.toString())
+        retval = False
+
+    # BleHandler.hasService...
+
+    return retval
+
 async def main(cs_ble, conf):
     printer = pprint.PrettyPrinter(indent=4)
 
@@ -142,23 +163,40 @@ async def main(cs_ble, conf):
     print("target device command go to DFU sent")
     await cs_ble.ble.waitForPeripheralToDisconnect()
     print("target device disconnected")
+    print("you now have 10 seconds to clear the bluetooth cache on your system")
+    try:
+        output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
+    except subprocess.CalledProcessError as e:
+        print("failed to clear cache using bluetoothhctl")
+        print(output)
+        print("continueing dfu attempt")
+
+    # await asyncio.sleep(1)
+
+    print("reconnecting")
     await cs_ble.connect(conf['bleAddress'],timeout=10, ignoreEncryption=True) # reconnect
-    print("target device reconnected and should now be ready for dfu:")
-    print("services available:", cs_ble.ble.activeClient.services)
-    print("characteristics available:", cs_ble.ble.activeClient.characteristics)
+    print("target device reconnected and should now be ready for dfu")
 
-    print("has dfu service:", cs_ble.ble.hasCharacteristic(DFUAdapter.CP_UUID.toString()))
-    print("has dfu service:", cs_ble.ble.hasCharacteristic(DFUAdapter.DP_UUID.toString()))
-
-    # verify DFU mode:
-    #           BleHandler.hasCharacteristic...
-    #           BleHandler.hasService...
+    if not validateDeviceIsInDfu(cs_ble):
+        raise CrownstoneBleException("Device is not in dfu mode")
+    else:
+        print("dfu state validated: OK")
 
     # TODO: any open/connect/register for notification call etc.
+
+    def notifCallback(uuid, data):
+        print("received notification for uuid:", uuid)
+        print("    - data: ", data)
+
+    # await cs_ble.ble.activeClient.subscribeNotifications(DFUAdapter.CP_UUID.toString(), notifCallback)
+    # await cs_ble.ble.activeClient.subscribeNotifications(DFUAdapter.DP_UUID.toString(), notifCallback)
 
     # ----------------------------------------
     # execute dfu
     # ----------------------------------------
+
+
+
     dfu_transport = CrownstoneDfuOverBle(cs_ble)
 
     await dfu_transport.open()
