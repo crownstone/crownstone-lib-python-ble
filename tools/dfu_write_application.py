@@ -213,12 +213,9 @@ async def main(cs_ble, conf):
     # chunkSize = 192
     # # await core._dev.uploadMicroapp(appData, appIndex, chunkSize)
 
-
-    while True:
-        await asyncio.sleep(1)
-        print("main loop sleeps")
-
+    print("finished firmware transmission")
     await terminate(cs_ble)
+    print("update complete")
 
 
 if __name__ == "__main__":
