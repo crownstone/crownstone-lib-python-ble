@@ -139,6 +139,15 @@ def validateDeviceIsInDfu(cs_ble):
 
     return retval
 
+def clearBluetoothCacheOnHost():
+    print("attempt to clear the bluetooth cache on your system")
+    output = None
+    try:
+        output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
+    except subprocess.CalledProcessError as e:
+        print("failed to clear cache using bluetoothhctl")
+        print(output)
+
 async def main(cs_ble, conf):
     printer = pprint.PrettyPrinter(indent=4)
 
@@ -154,6 +163,8 @@ async def main(cs_ble, conf):
     print("DP_UUID: ", DFUAdapter.DP_UUID.toString())
     print("----------------------")
 
+    clearBluetoothCacheOnHost()
+
     await cs_ble.connect(conf['bleAddress'],timeout=10)
     print("connected to target device")
 
@@ -164,13 +175,8 @@ async def main(cs_ble, conf):
         await cs_ble.ble.waitForPeripheralToDisconnect()
         print("target device disconnected")
 
-        print("attempt to clear the bluetooth cache on your system")
-        try:
-            output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
-        except subprocess.CalledProcessError as e:
-            print("failed to clear cache using bluetoothhctl")
-            print(output)
-            print("continueing dfu attempt")
+        clearBluetoothCacheOnHost()
+        print("continueing dfu attempt")
 
         print("reconnecting")
         await cs_ble.connect(conf['bleAddress'], timeout=10, ignoreEncryption=True)  # reconnect
