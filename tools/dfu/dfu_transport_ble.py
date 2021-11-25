@@ -1,5 +1,4 @@
 import asyncio
-import queue
 import struct
 
 from crownstone_ble.Exceptions import BleError

@@ -6,11 +6,6 @@ class DFUAdapter:
     BASE_UUID = BLEUUIDBase([0x8E, 0xC9, 0x00, 0x00, 0xF3, 0x15, 0x4F, 0x60,
                                  0x9F, 0xB8, 0x83, 0x88, 0x30, 0xDA, 0xEA, 0x50])
 
-    # Buttonless characteristics
-    BLE_DFU_BUTTONLESS_CHAR_UUID        = BLEUUID(0x0003, BASE_UUID)
-    BLE_DFU_BUTTONLESS_BONDED_CHAR_UUID = BLEUUID(0x0004, BASE_UUID)
-    SERVICE_CHANGED_UUID                = BLEUUID(0x2A05)
-
     # Bootloader characteristics
     CP_UUID     = BLEUUID(0x0001, BASE_UUID)
     DP_UUID     = BLEUUID(0x0002, BASE_UUID)

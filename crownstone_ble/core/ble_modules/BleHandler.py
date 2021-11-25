@@ -17,7 +17,6 @@ from crownstone_ble.core.bluetooth_delegates.NotificationDelegate import Notific
 from crownstone_ble.core.modules.Validator import Validator
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
-logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
 
 CCCD_UUID = 0x2902

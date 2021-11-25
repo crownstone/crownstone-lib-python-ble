@@ -30,18 +30,6 @@ class BLEUUIDBase(object):
 
         self.__array = None
 
-    # @classmethod
-    # def from_c(cls, uuid):
-    #     return cls(uuid_type=uuid.type)
-
-    # def to_c(self):
-    #     lsb_list = self.base[::-1]
-    #     self.__array = util.list_to_uint8_array(lsb_list)
-    #     uuid = driver.ble_uuid128_t()
-    #     uuid.uuid128 = self.__array.cast()
-    #     return uuid
-
-
 class BLEUUID(object):
     class Standard(Enum):
         unknown = 0x0000
@@ -111,17 +99,3 @@ class BLEUUID(object):
 
         hyphenated = "-".join(["".join([s[0:4], val[0:4]]),s[8:12], s[12:16], s[16:20], s[20:32]])
         return hyphenated
-
-    # @classmethod
-    # def from_c(cls, uuid):
-    #     return cls(value=uuid.uuid, base=BLEUUIDBase.from_c(uuid))
-    #
-    # def to_c(self):
-    #     assert self.base.type is not None, "Vendor specific UUID not registered"
-    #     uuid = driver.ble_uuid_t()
-    #     if isinstance(self.value, BLEUUID.Standard):
-    #         uuid.uuid = self.value.value
-    #     else:
-    #         uuid.uuid = self.value
-    #     uuid.type = self.base.type
-    #     return uuid
