@@ -142,7 +142,7 @@ def validateDeviceIsInDfu(cs_ble):
 async def main(cs_ble, conf):
     printer = pprint.PrettyPrinter(indent=4)
 
-    print("Main")
+    print("dfu_write_application main() entered with the following config")
     printer.pprint(conf)
 
     # -----------------------------------------
@@ -150,66 +150,53 @@ async def main(cs_ble, conf):
     # -----------------------------------------
 
     print("--- DFU constants: ---")
-    print(DFUAdapter.BLE_DFU_BUTTONLESS_CHAR_UUID)
-    print(DFUAdapter.BLE_DFU_BUTTONLESS_BONDED_CHAR_UUID)
-    print(DFUAdapter.SERVICE_CHANGED_UUID)
     print("CP_UUID: ", DFUAdapter.CP_UUID.toString())
     print("DP_UUID: ", DFUAdapter.DP_UUID.toString())
     print("----------------------")
 
     await cs_ble.connect(conf['bleAddress'],timeout=10)
     print("connected to target device")
-    await cs_ble.control.putInDfuMode()
-    print("target device command go to DFU sent")
-    await cs_ble.ble.waitForPeripheralToDisconnect()
-    print("target device disconnected")
-    print("you now have 10 seconds to clear the bluetooth cache on your system")
-    try:
-        output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
-    except subprocess.CalledProcessError as e:
-        print("failed to clear cache using bluetoothhctl")
-        print(output)
-        print("continueing dfu attempt")
-
-    # await asyncio.sleep(1)
-
-    print("reconnecting")
-    await cs_ble.connect(conf['bleAddress'],timeout=10, ignoreEncryption=True) # reconnect
-    print("target device reconnected and should now be ready for dfu")
 
     if not validateDeviceIsInDfu(cs_ble):
-        raise CrownstoneBleException("Device is not in dfu mode")
+        print("device not in fdu mode, sending dfu command")
+        await cs_ble.control.putInDfuMode()
+        print("target device command go to DFU sent")
+        await cs_ble.ble.waitForPeripheralToDisconnect()
+        print("target device disconnected")
+
+        print("attempt to clear the bluetooth cache on your system")
+        try:
+            output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
+        except subprocess.CalledProcessError as e:
+            print("failed to clear cache using bluetoothhctl")
+            print(output)
+            print("continueing dfu attempt")
+
+        print("reconnecting")
+        await cs_ble.connect(conf['bleAddress'], timeout=10, ignoreEncryption=True)  # reconnect
+
+        print("target device reconnected and should now be ready for dfu")
+        if not validateDeviceIsInDfu(cs_ble):
+            raise CrownstoneBleException("Device is not in dfu mode")
     else:
-        print("dfu state validated: OK")
-
-    # TODO: any open/connect/register for notification call etc.
-
-    def notifCallback(uuid, data):
-        print("received notification for uuid:", uuid)
-        print("    - data: ", data)
-
-    # await cs_ble.ble.activeClient.subscribeNotifications(DFUAdapter.CP_UUID.toString(), notifCallback)
-    # await cs_ble.ble.activeClient.subscribeNotifications(DFUAdapter.DP_UUID.toString(), notifCallback)
+        print("already in dfu mode attempting to continu/recover")
 
     # ----------------------------------------
     # execute dfu
     # ----------------------------------------
 
-
-
     dfu_transport = CrownstoneDfuOverBle(cs_ble)
 
+    print("opening dfu transport")
     await dfu_transport.open()
 
+    print("sending init packet")
     # send init packet
     with open(conf['dfu']['datFile'], 'rb') as f:
         fileContent = f.read()
         await dfu_transport.send_init_packet(fileContent)
 
-    while True:
-        await asyncio.sleep(1)
-        print("main loop sleeps")
-
+    print("sending firmware")
     # send firmware file
     with open(conf['dfu']['binFile'], 'rb') as f:
         fileContent = f.read()

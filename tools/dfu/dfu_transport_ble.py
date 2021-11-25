@@ -125,7 +125,7 @@ class CrownstoneDfuOverBle:
             raise DfuException("Failed to send init packet")
 
     async def send_firmware(self, firmware):
-        response = self.__select_data()
+        response = await self.__select_data()
         await self.try_to_recover_before_send_firmware(response, firmware)
 
         for i in range(response['offset'], len(firmware), response['max_size']):
