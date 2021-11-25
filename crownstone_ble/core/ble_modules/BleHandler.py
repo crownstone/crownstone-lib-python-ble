@@ -17,8 +17,8 @@ from crownstone_ble.core.bluetooth_delegates.NotificationDelegate import Notific
 from crownstone_ble.core.modules.Validator import Validator
 from crownstone_ble.topics.SystemBleTopics import SystemBleTopics
 
+logging.basicConfig(level=logging.DEBUG)
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)
 
 CCCD_UUID = 0x2902
 
@@ -260,11 +260,11 @@ class BleHandler:
         await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
 
 
-    async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
+    async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content, response=True):
         _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
         payload = self._preparePayload(content)
-        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=response)
 
 
     async def readCharacteristic(self, serviceUUID, characteristicUUID):

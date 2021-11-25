@@ -35,7 +35,8 @@ class CrownstoneDfuOverBle:
         await self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
             CrownstoneDfuOverBle.ServiceUuid,
             char_uuid,
-            data)
+            data,
+            response=False)
 
     async def writeCharacteristicForResponse(self, char_uuid, data):
         writemethod = lambda: self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
