@@ -264,7 +264,7 @@ class CrownstoneDfuOverBle:
 
         for i in range(0, len(data), DFUAdapter.LOCAL_ATT_MTU):
             to_transmit = data[i:i + DFUAdapter.LOCAL_ATT_MTU]
-            raw_response = await self.write_data_point(data)
+            raw_response = await self.write_data_point(to_transmit)
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
