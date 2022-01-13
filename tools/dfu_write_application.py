@@ -4,6 +4,8 @@
 
 import asyncio
 import logging
+import os
+import zipfile
 from os import path
 import datetime
 import pprint
@@ -71,7 +73,37 @@ def validateDfuConf(file_path, conf):
         zipFilePath = findDfuFile(file_path, zipFile)
         if zipFilePath is None:
             raise ValueError(F"parameter zipFile set, but file {zipFile} not found")
+
+        zipFilePathName, zipFilePathExt = os.path.splitext(zipFilePath)
+        if not zipFilePathExt == ".zip":
+            raise ValueError(F"parameter zipFile set, but file {zipFile} is not a zip")
+
         conf['dfu']['zipFile'] = zipFilePath
+
+        # extract
+        with zipfile.ZipFile(zipFilePath, 'r') as zip_ref:
+            zip_ref.extractall(zipFilePathName)
+
+        # amend conf with extracted files
+        for f in os.listdir(zipFilePathName):
+                unzippedFile = os.path.join(zipFilePathName, f)
+                print(unzippedFile)
+
+                if os.path.isfile(unzippedFile):
+                    unzippedFileExt = os.path.splitext(unzippedFile)[-1]
+
+                    if unzippedFileExt == ".dat":
+                        print("found datfile")
+                        if conf['dfu']['datFile'] is not None:
+                            raise ValueError("dfu zip contained multiple .dat files")
+                        conf['dfu']['datFile'] = unzippedFile
+                    if unzippedFileExt == ".bin":
+                        print("found binfile")
+                        if conf['dfu']['binFile'] is not None:
+                            raise ValueError("dfu zip contained multiple .bin files")
+                        conf['dfu']['binFile'] = unzippedFile
+        if conf['dfu']['datFile'] is None or conf['dfu']['binFile'] is None:
+            raise ValueError("zipfile needs to contain both a .dat and a .bin file")
 
         return True
 

@@ -115,8 +115,11 @@ class CrownstoneDfuOverBle:
 
         for r in range(DfuTransportBle.RETRIES_NUMBER):
             try:
+                print("call send `create command`")
                 await self.__create_command(len(init_packet))
+                print("send init packet data")
                 await self.__stream_data(data=init_packet)
+                print("send execute command")
                 await self.__execute()
             except ValidationException:
                 pass
