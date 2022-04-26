@@ -14,6 +14,14 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/crownstone/crownstone-lib-python-ble",
     install_requires=list(package.strip() for package in open('requirements.txt')),
+    scripts=[
+        'tools/cs_dfu_write_application',
+        'tools/cs_scan_any_crownstone',
+        'tools/cs_scan_for_alternative_state',
+        'tools/cs_scan_known_crownstones',
+        'tools/cs_switch_crownstone',
+        'tools/cs_upload_microapp',
+    ],
     classifiers=[
         'Programming Language :: Python :: 3.7'
     ],
