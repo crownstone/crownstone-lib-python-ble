@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Experimental tool to upload a microapp to a Crownstone. """
+""" Experimental tool to upload bluenet firmware to a Crownstone. """
 
 import asyncio
 import logging
@@ -183,8 +183,8 @@ def clearBluetoothCacheOnHost():
 async def main(cs_ble, conf):
     printer = pprint.PrettyPrinter(indent=4)
 
-    print("dfu_write_application main() entered with the following config")
-    printer.pprint(conf)
+    #print("dfu_write_application main() entered with the following config")
+    #printer.pprint(conf)
 
     # -----------------------------------------
     # connect and put target device in dfu mode
@@ -197,10 +197,14 @@ async def main(cs_ble, conf):
 
     clearBluetoothCacheOnHost()
 
-    await cs_ble.connect(conf['bleAddress'],timeout=10)
+    print("Try to connect to ", conf['bleAddress'])
+    #await cs_ble.connect(conf['bleAddress'])
+    await cs_ble.connect(conf['bleAddress'],timeout=45)
     print("connected to target device")
 
     if not validateDeviceIsInDfu(cs_ble):
+        print("Connected. Write test...")
+        await cs_ble.control.setSwitch(2)
         print("device not in fdu mode, sending dfu command")
         await cs_ble.control.putInDfuMode()
         print("target device command go to DFU sent")
@@ -257,7 +261,12 @@ if __name__ == "__main__":
     cs_ble = CrownstoneBle(bleAdapterAddress=conf["bleAdapterAddress"])
 
     # load the encryption keys into the library
-    loadKeysFromConfig(cs_ble, conf)
+    #loadKeysFromConfig(cs_ble, conf)
+    try:
+        loadKeysFromConfig(cs_ble, conf)
+    except Exception as e:
+        print("ERROR", e)
+        quit()
 
     loop = asyncio.get_event_loop()
     try:
@@ -267,3 +276,4 @@ if __name__ == "__main__":
         print("Stopping.")
     finally:
         loop.run_until_complete(terminate(cs_ble))
+
