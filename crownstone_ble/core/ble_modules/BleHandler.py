@@ -183,6 +183,9 @@ class BleHandler:
         except bleak.BleakError as err:
             _LOGGER.info(f"Failed to connect: {err}")
             connected = False
+        except TimeoutError as err:
+            _LOGGER.info(f"Failed to connect: {err}")
+            connected = False
         return connected
 
 
