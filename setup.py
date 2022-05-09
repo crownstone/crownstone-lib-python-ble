@@ -20,6 +20,7 @@ setup(
         'tools/cs_scan_for_alternative_state',
         'tools/cs_scan_known_crownstones',
         'tools/cs_switch_crownstone',
+        'tools/cs_enable_microapp',
         'tools/cs_upload_microapp',
     ],
     classifiers=[
