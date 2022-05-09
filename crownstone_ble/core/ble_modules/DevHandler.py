@@ -30,7 +30,7 @@ class DevHandler:
         infoPacket = MicroappInfoPacket(resultPacket.payload)
         return infoPacket
 
-    async def uploadMicroapp(self, data: bytearray, index: int = 0, chunkSize: int = 128):
+    async def uploadMicroapp(self, data: bytearray, index: int = 0, protocol: int = 0, chunkSize: int = 128):
         for i in range(0, len(data), chunkSize):
             chunk = data[i : i + chunkSize]
             # Pad the chunk with 0xFF, so the size is a multiple of 4.
@@ -38,7 +38,7 @@ class DevHandler:
                 if isinstance(chunk, bytes):
                     chunk = bytearray(chunk)
                 chunk.extend((4 - (len(chunk) % 4)) * [0xFF])
-            await self.uploadMicroappChunk(index, chunk, i)
+            await self.uploadMicroappChunk(index, protocol, chunk, i)
 
     async def uploadMicroappChunk(self, index: int, protocol: int, data: bytearray, offset: int):
         _LOGGER.info(f"Upload microapp chunk index={index} offset={offset} size={len(data)}")
