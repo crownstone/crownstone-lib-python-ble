@@ -183,6 +183,9 @@ class BleHandler:
         except bleak.BleakError as err:
             _LOGGER.info(f"Failed to connect: {err}")
             connected = False
+        except TimeoutError as err:
+            _LOGGER.info(f"Failed to connect: {err}")
+            connected = False
         return connected
 
 
@@ -259,11 +262,11 @@ class BleHandler:
         await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
 
 
-    async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content):
+    async def writeToCharacteristicWithoutEncryption(self, serviceUUID, characteristicUUID, content, response=True):
         _LOGGER.debug(f"writeToCharacteristicWithoutEncryption serviceUUID={serviceUUID} characteristicUUID={characteristicUUID} content={content}")
         await self.is_connected_guard()
         payload = self._preparePayload(content)
-        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=True)
+        await self.activeClient.client.write_gatt_char(characteristicUUID, payload, response=response)
 
 
     async def readCharacteristic(self, serviceUUID, characteristicUUID):

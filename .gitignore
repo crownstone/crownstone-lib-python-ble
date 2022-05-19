@@ -139,3 +139,5 @@ tools/config/tool_config.json
 tools/experiment/key_file.json
 
 experiment/
+
+tools/dfu_images/
