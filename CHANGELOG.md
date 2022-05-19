@@ -1,5 +1,10 @@
 # Changelog
 
+## Release 2.3.0
+
+- Added protocol argument to microapp functions.
+- Moved tools to SDK repo.
+
 ## Release 2.2.0
 
 - Added retries when connecting.
