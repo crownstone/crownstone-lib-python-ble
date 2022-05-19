@@ -60,6 +60,7 @@ class DevHandler:
         await self.core.control._writeControlAndGetResult(controlPacket)
 
     async def removeMicroapp(self, index):
+        # TODO: handle WAIT_FOR_SUCCESS
         packet = MicroappHeaderPacket(index)
         controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.serialize()).serialize()
         await self.core.control._writeControlAndWaitForSuccess(controlPacket)
