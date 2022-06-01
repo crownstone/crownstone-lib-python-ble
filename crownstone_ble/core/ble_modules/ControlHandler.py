@@ -271,11 +271,10 @@ class ControlHandler:
 
     async def _writeControlAndWaitForSuccess(self, controlPacket, timeout = 5, acceptedResultValues = [ResultValue.SUCCESS, ResultValue.SUCCESS_NO_CHANGE]):
         """
-        Writes the control packet, checks the result value, and returns the result packet.
+        Writes the control packet, and waits for success.
         :param controlPacket:          Serialized control packet to write.
         :param timeout:                Timeout in seconds.
         :param acceptedResultValues:   List of result values that are considered a success.
-        :returns:                      The result packet.
         """
         def handleResult(notificationData):
             result = ResultPacket(notificationData)
