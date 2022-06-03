@@ -3,6 +3,7 @@ import logging
 from crownstone_core.Enums import CrownstoneOperationMode
 
 from crownstone_ble.core.ble_modules.DevHandler import DevHandler
+from crownstone_ble.core.ble_modules.MicroappHandler import MicroappHandler
 from crownstone_ble.core.container.ScanData import ScanData
 
 from crownstone_ble.core.ble_modules.BleHandler import BleHandler
@@ -34,6 +35,7 @@ class CrownstoneBle:
         self.setup    = SetupHandler(self)
         self.state    = StateHandler(self)
         self.debug    = DebugHandler(self)
+        self.microapp = MicroappHandler(self.control)
         self._dev     = DevHandler(self)
         self.ble      = BleHandler(self.settings, bleAdapterAddress)
 
