@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.4.0
+
+- Moved microapp functions out of experimental, into its own handler.
+
 ## Release 2.3.0
 
 - Added protocol argument to microapp functions.
