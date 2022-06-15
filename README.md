@@ -4,19 +4,15 @@ A library to interact with Crownstones via Bluetooth LE.
 
 This library uses Bleak as bluetooth backend, which supports Windows, MacOS and Linux.
 
-Python 3.7 or higher is required for this library.
-
-
-
 # Installation
 
-If you want to use python virtual environments, take a look at the [README_VENV](/README_VENV.MD)
+Python 3.7 or 3.8 is required for this library. At the moment an upstream dependency (pythonnet) is broken (on Windows 10) for Python 3.9 and newer.
 
-We use `pip3` in the example below because pip is usually the python 2 client. If you're using virtual environments, it could be that pip3 does not exist there. In that case, use pip.
-```
-pip3 install crownstone-ble
-```
+If you want to use python virtual environments, take a look at the [README_VENV](/README_VENV.MD) and be sure that your environment is activated before installing. Afterwards it's as simple as:
 
+```
+python3 -m pip install crownstone_ble
+```
 
 
 # Async functions
