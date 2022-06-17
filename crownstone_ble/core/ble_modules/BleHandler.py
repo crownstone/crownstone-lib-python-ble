@@ -147,6 +147,11 @@ class BleHandler:
         # Always clean up cached setup key for a new connection.
         self.settings.exitSetup()
 
+        connected = await self.is_connected(address)
+        if connected:
+            _LOGGER.info("Already connected")
+            return
+
         # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
 
