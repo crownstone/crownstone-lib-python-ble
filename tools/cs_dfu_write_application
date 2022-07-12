@@ -21,16 +21,17 @@ from tools.util.config import getToolConfig, loadKeysFromConfig, setupDefaultCom
 
 tool_version = "1.0.0"
 
+logger = logging.getLogger(__name__)
 
-def checkFilePath(path_to_file, filename):
+def checkFilePath(path_to_file, filename, shouldExist=True):
+    """
+    return path to file if it exists, else None when shouldExists is True
+    returns opposite when shouldExists is False
+    """
     if path_to_file is None or filename is None:
         return None
-
     full_path = path.join(path_to_file, filename)
-    if not path.exists(full_path):
-        return None
-
-    return full_path
+    return None if path.exists(full_path) ^ shouldExist else full_path
 
 def findDfuFile(path_to_file, filename):
     checkedPath = checkFilePath(path_to_file,filename)
@@ -45,7 +46,7 @@ def findDfuFile(path_to_file, filename):
 
 def overwriteConfWithArgIfAvailable(conf, parsed_args, argname, section = None):
     """
-    Overwrites the 'dfu' section of tool_config.json with commandline arguments when given argname is available.
+    Overwrites a config option from tool_config.json with commandline arguments when given argname is available.
     """
     arg_val = getattr(parsed_args, argname)
     if arg_val is not None:
@@ -58,6 +59,9 @@ def validateDfuConf(file_path, conf):
     """
     Checks if the dfu_images files exist and adjusts conf to have the full paths rather than just filenames.
     DFU files are also found if they are put in /file_path/dfu_images/.
+
+    Raises exceptions on failure,
+    returns True on success.
     """
     if conf['dfu'] is None:
         raise ValueError("'dfu' section of conf not found")
@@ -129,12 +133,25 @@ def validateAddressConf(conf):
     if conf.get('bleAddress') is None:
         raise ValueError("need bleAddress of target device for dfu")
 
+def loadLogfileIfAvailable(conf):
+    logfolder = conf['absolutePathToLogFolder']
+    if logfolder is not None:
+        if os.path.exists(logfolder):
+            logfilename = os.path.realpath(os.path.basename(__file__))
+            logpathfile = os.path.join(logfolder,logfilename)
+            logger.info("adding logging file handler" + str(logpathfile))
+            logger.addHandler(logging.FileHandler(logpathfile))
+        else:
+            raise ValueError("absolutePathToLogFolder set but folder does not exist")
+
+
 def loadToolConfig():
     parser = setupDefaultCommandLineArguments('Scan for any Crownstones continuously and print the results.')
     parser.add_argument('-a', '--bleAddress', required=True, help='The MAC address/handle of the Crownstone you want to connect to')
     parser.add_argument('-z', '--zipFile', default=None, help='zip file describing the binary to upload')
     parser.add_argument('-b', '--binFile', default=None, help='Binary of the application to upload')
     parser.add_argument('-d', '--datFile', default=None, help='Dat file describing the binary to upload')
+    parser.add_argument('-l', '--absolutePathToLogFolder', default=None, help='location where to write logging to')
 
     file_path = path.dirname(path.realpath(__file__))
     [tool_config, parsed_args] = getToolConfig(file_path, parser)
@@ -143,9 +160,12 @@ def loadToolConfig():
     overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'binFile', section='dfu')
     overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'datFile', section='dfu')
     overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'bleAddress')
+    overwriteConfWithArgIfAvailable(tool_config, parsed_args, 'absolutePathToLogFolder')
 
     validateDfuConf(file_path, tool_config)
     validateAddressConf(tool_config)
+
+    loadLogfileIfAvailable(tool_config)
 
     return tool_config
 
@@ -178,7 +198,8 @@ def clearBluetoothCacheOnHost():
         output = subprocess.check_output("bluetoothctl -- remove {0}".format(conf['bleAddress']), shell=True)
     except subprocess.CalledProcessError as e:
         print("failed to clear cache using bluetoothhctl")
-        print(output)
+        print(e)
+        print("prcess output:\n", output)
 
 async def main(cs_ble, conf):
     printer = pprint.PrettyPrinter(indent=4)
