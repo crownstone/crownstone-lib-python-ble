@@ -8,6 +8,7 @@ import os
 import zipfile
 from os import path
 import datetime
+import time
 import pprint
 import subprocess
 
@@ -183,9 +184,13 @@ def validateDeviceIsInDfu(cs_ble):
     if not cs_ble.ble.hasCharacteristic(DFUAdapter.CP_UUID.toString()):
         print("dfu control point characteristic missing :", DFUAdapter.CP_UUID.toString())
         retval = False
+    else:
+        print("dfu control point characteristic found")
     if not cs_ble.ble.hasCharacteristic(DFUAdapter.DP_UUID.toString()):
         print("dfu data point characteristic missing :", DFUAdapter.DP_UUID.toString())
         retval = False
+    else:
+        print("dfu data point characteristic found")
 
     # BleHandler.hasService...
 
@@ -235,8 +240,17 @@ async def main(cs_ble, conf):
         clearBluetoothCacheOnHost()
         print("continueing dfu attempt")
 
-        print("reconnecting")
-        await cs_ble.connect(conf['bleAddress'], timeout=10, ignoreEncryption=True)  # reconnect
+        await asyncio.sleep(1)
+
+        for i in range(3):
+            try:
+                print(f"reconnecting ({i})")
+                await cs_ble.connect(conf['bleAddress'], timeout=15, ignoreEncryption=True)  # reconnect
+                print("connected")
+                break
+            except Exception as e:
+                print(e)
+                await asyncio.sleep(1)
 
         print("target device reconnected and should now be ready for dfu")
         if not validateDeviceIsInDfu(cs_ble):
