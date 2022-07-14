@@ -1,5 +1,6 @@
 import asyncio
 import struct
+import time
 
 from crownstone_ble.Exceptions import BleError
 from crownstone_core.Exceptions import CrownstoneBleException
@@ -41,7 +42,8 @@ class CrownstoneDfuOverBle:
         writemethod = lambda: self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
                                                     CrownstoneDfuOverBle.ServiceUuid,
                                                     char_uuid,
-                                                    data)
+                                                    data,
+                                                    response=False)
         try:
             result = await self.receiveRawNotification(
                                                         CrownstoneDfuOverBle.ServiceUuid,
@@ -55,9 +57,12 @@ class CrownstoneDfuOverBle:
 
         return result
 
-    async def receiveRawNotification(self, serviceUUID, characteristicUUID, writeCommand, timeout=None):
+    async def receiveRawNotification(self, serviceUUID, characteristicUUID, writeCommand, timeout=None, shouldThrowOnTimeout=True):
         """
-        adapted from BleHandler.setupSingleNotification, which uses a wrapper (notificationDelegate) that is too thick.
+        Subscribes for notifications on the given characteriistic id. Calls given writeCommand and then polls (async) for result.
+        @return: shouldThrowOnTimeout is False, None is a valid return value. Otherwise, an exception will be raised on timeout.
+
+        Note: adapted from BleHandler.setupSingleNotification, which uses a wrapper (notificationDelegate) that is too thick.
         """
         if timeout is None:
             timeout = 12.5
@@ -89,7 +94,7 @@ class CrownstoneDfuOverBle:
 
         ble_client.unsubscribeNotifications(characteristicUUID)
 
-        if notificationData is None:
+        if notificationData is None and shouldThrowOnTimeout:
             raise CrownstoneBleException(BleError.NO_NOTIFICATION_DATA_RECEIVED, "No notification data received.")
 
         return notificationData
@@ -100,8 +105,25 @@ class CrownstoneDfuOverBle:
     async def write_control_point(self, data):
         return await self.writeCharacteristicForResponse(DFUAdapter.CP_UUID.toString(), data)
 
-    async def write_data_point(self, data):
-        return await self.writeCharacteristicWithoutResponse(DFUAdapter.DP_UUID.toString(), data)
+    async def write_data_point(self, data, expectResponse=False):
+        print(F"writing {len(data)} bytes to data point: ", " ".join(["{0:02X}".format(x) for x in data]))
+        if not expectResponse:
+            return await self.writeCharacteristicWithoutResponse(DFUAdapter.DP_UUID.toString(), data)
+        else:
+            # write to data char
+            writemethod = lambda: self.crownstone_ble.ble.writeToCharacteristicWithoutEncryption(
+                                                        CrownstoneDfuOverBle.ServiceUuid,
+                                                        DFUAdapter.DP_UUID.toString(),
+                                                        data,
+                                                        response=True)
+            # wait for notification at control char
+            return await self.receiveRawNotification(CrownstoneDfuOverBle.ServiceUuid,
+                                                     DFUAdapter.CP_UUID.toString(),
+                                                     writemethod,
+                                                     DfuTransportBle.DEFAULT_TIMEOUT,
+                                                     shouldThrowOnTimeout=False)
+
+
 
     ### -------- main protocol methods -----------
 
@@ -118,7 +140,7 @@ class CrownstoneDfuOverBle:
                 print("call send `create command`")
                 await self.__create_command(len(init_packet))
                 print("send init packet data")
-                await self.__stream_data(data=init_packet)
+                await self.__stream_data(data=init_packet, expectResponse=False)
                 print("send execute command")
                 await self.__execute()
             except ValidationException:
@@ -128,6 +150,7 @@ class CrownstoneDfuOverBle:
             raise DfuException("Failed to send init packet")
 
     async def send_firmware(self, firmware):
+        print(F"send_firmware, size: {len(firmware)}")
         response = await self.__select_data()
         await self.try_to_recover_before_send_firmware(response, firmware)
 
@@ -135,8 +158,14 @@ class CrownstoneDfuOverBle:
             data = firmware[i:i + response['max_size']]
             for r in range(DfuTransportBle.RETRIES_NUMBER):
                 try:
+                    print("create")
                     await self.__create_data(len(data))
+                    # if i == 0:
+                        # print("sleeping on first create because of possible mass erase ")
+                        # await asyncio.sleep(1)
+                    print(F"stream {len(data)} bytes")
                     response['crc'] = await self.__stream_data(data=data, crc=response['crc'], offset=i)
+                    print("execute")
                     await self.__execute()
                 except ValidationException:
                     pass
@@ -232,6 +261,7 @@ class CrownstoneDfuOverBle:
         self.__parse_response(raw_response, DfuTransportBle.OP_CODE['SetPRN'])
 
     async def __calculate_checksum(self):
+        print("__calculate_checksum")
         raw_response = await self.write_control_point([DfuTransportBle.OP_CODE['CalcChecSum']])
         response = self.__parse_response(raw_response, DfuTransportBle.OP_CODE['CalcChecSum'])
 
@@ -259,18 +289,28 @@ class CrownstoneDfuOverBle:
 
     ### ------------ raw data communication ------------
 
-    async def __stream_data(self, data, crc=0, offset=0):
+    async def __stream_data(self, data, crc=0, offset=0, expectResponse=None):
+        """
+        if expectingResponse is set to True, notifications will be checked and parsed.
+        if expectingResponse is set to True, notifications will not be checked.
+        If expectingResponse is set to None, a response will be checked for every self.prn packets.
+        """
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
 
         current_pnr = 0
 
         for i in range(0, len(data), DFUAdapter.LOCAL_ATT_MTU):
             to_transmit = data[i:i + DFUAdapter.LOCAL_ATT_MTU]
-            raw_response = await self.write_data_point(to_transmit)
+            expectingResponse = expectResponse if expectResponse is not None else self.prn == current_pnr
+            raw_response = await self.write_data_point(to_transmit, expectResponse=expectingResponse)
+            print("notification data after writing datapoint: ", raw_response)
+            print("sleeping a few ms for debug")
+            await asyncio.sleep(0.05)  # DEBUG: sleep a milisecond
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
             current_pnr += 1
             if self.prn == current_pnr:
+                print("prn check happening")
                 current_pnr = 0
                 response = self.__parse_checksum_response(raw_response)
                 self.validate_crc(crc, response, offset)
@@ -284,6 +324,7 @@ class CrownstoneDfuOverBle:
         """
         Parses a raw response (notification) and checks for errors.
         """
+        print("__parse_response")
         def get_dict_key(dictionary, value):
             return next((key for key, val in list(dictionary.items()) if val == value), None)
 
