@@ -169,7 +169,7 @@ class CrownstoneDfuOverBle:
                     # if i == 0:
                         # print("sleeping on first create because of possible mass erase ")
                         # await asyncio.sleep(1)
-                    print(F"stream {len(data)} bytes")
+                    print(F"stream bytes [{i},{i+len(data)}] len={len(data)}")
                     response['crc'] = await self.__stream_data(data=data, crc=response['crc'], offset=i)
                     print("execute")
                     await self.__execute()
@@ -247,6 +247,7 @@ class CrownstoneDfuOverBle:
         if offset != resp['offset']:
             raise ValidationException('Failed offset validation.\n' \
                                       + 'Expected: {} Received: {}.'.format(offset, resp['offset']))
+        print("validate_crc: OK")
 
     ### -------------- nordic protocol commands -----------
 
@@ -311,11 +312,7 @@ class CrownstoneDfuOverBle:
         for i in range(0, len(data), DFUAdapter.LOCAL_ATT_MTU):
             to_transmit = data[i:i + DFUAdapter.LOCAL_ATT_MTU]
             shouldCheckResponse = shouldCheckNotification(packetCounter)
-            raw_response = await self.write_data_point(to_transmit, expectResponse=)
-
-            print("notification data after writing datapoint: ", raw_response)
-            print("sleeping a few ms for debug")
-            await asyncio.sleep(0.05)  # DEBUG: sleep a milisecond
+            raw_response = await self.write_data_point(to_transmit, expectResponse=shouldCheckResponse)
 
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
