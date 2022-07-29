@@ -86,11 +86,17 @@ class CrownstoneDfuOverBle:
         await writeCommand()
 
         # wait for the results to come in.
-        loopCount = 0
         pollInterval = 0.1
-        while not notificationReceived and loopCount < (timeout / pollInterval):
+        pollTime = 0
+        prevPollTime = 0
+        printFreq = 1.0
+        while not notificationReceived and pollTime < timeout:
             await asyncio.sleep(pollInterval)
-            loopCount += 1
+            prevPollTime = pollTime
+            pollTime += pollInterval
+            if int(prevPollTime/printFreq) != int(pollTime/printFreq):
+                print("waiting for notification")
+
 
         ble_client.unsubscribeNotifications(characteristicUUID)
 
@@ -291,27 +297,32 @@ class CrownstoneDfuOverBle:
 
     async def __stream_data(self, data, crc=0, offset=0, expectResponse=None):
         """
-        if expectingResponse is set to True, notifications will be checked and parsed.
-        if expectingResponse is set to True, notifications will not be checked.
+        if expectingResponse is set to True, notifications will be checked and parsed at self.prn intervals .
+        if expectingResponse is set to False, notifications will not be checked.
         If expectingResponse is set to None, a response will be checked for every self.prn packets.
         """
         logger.debug("BLE: Streaming Data: len:{0} offset:{1} crc:0x{2:08X}".format(len(data), offset, crc))
 
-        current_pnr = 0
+        def shouldCheckNotification(currPnr):
+            if expectResponse is not None and self.prn != 0:
+                return expectResponse and (currPnr +1) % self.prn  == 0
 
+        packetCounter = 0
         for i in range(0, len(data), DFUAdapter.LOCAL_ATT_MTU):
             to_transmit = data[i:i + DFUAdapter.LOCAL_ATT_MTU]
-            expectingResponse = expectResponse if expectResponse is not None else self.prn == current_pnr
-            raw_response = await self.write_data_point(to_transmit, expectResponse=expectingResponse)
+            shouldCheckResponse = shouldCheckNotification(packetCounter)
+            raw_response = await self.write_data_point(to_transmit, expectResponse=)
+
             print("notification data after writing datapoint: ", raw_response)
             print("sleeping a few ms for debug")
             await asyncio.sleep(0.05)  # DEBUG: sleep a milisecond
+
             crc = binascii.crc32(to_transmit, crc) & 0xFFFFFFFF
             offset += len(to_transmit)
-            current_pnr += 1
-            if self.prn == current_pnr:
-                print("prn check happening")
-                current_pnr = 0
+            packetCounter += 1
+
+            if shouldCheckResponse:
+                print("packet count+1 is multiple of prn: checking crc")
                 response = self.__parse_checksum_response(raw_response)
                 self.validate_crc(crc, response, offset)
 
