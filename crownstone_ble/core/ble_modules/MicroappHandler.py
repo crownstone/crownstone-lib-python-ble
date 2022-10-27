@@ -2,6 +2,7 @@ import logging
 
 from crownstone_core.packets.microapp.MicroappHeaderPacket import MicroappHeaderPacket
 from crownstone_core.packets.microapp.MicroappInfoPacket import MicroappInfoPacket
+from crownstone_core.packets.microapp.MicroappMessagePacket import MicroappMessagePacket
 from crownstone_core.packets.microapp.MicroappUploadPacket import MicroappUploadPacket
 from crownstone_core.protocol.BlePackets import ControlPacket
 from crownstone_core.protocol.BluenetTypes import ControlType
@@ -59,3 +60,10 @@ class MicroappHandler:
         controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.serialize()).serialize()
         await self.control._writeControlAndWaitForSuccess(controlPacket)
         _LOGGER.info(f"Removed app {index}")
+
+    async def sendMessage(self, index: int, protocol: int, data: bytearray):
+        _LOGGER.info(f"Send message to microapp index={index}")
+        header = MicroappHeaderPacket(appIndex=index, protocol=protocol)
+        packet = MicroappMessagePacket(header, data)
+        controlPacket = ControlPacket(ControlType.MICROAPP_MESSAGE).loadByteArray(packet.serialize()).serialize()
+        await self.control._writeControlAndWaitForSuccess(controlPacket)

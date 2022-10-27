@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.5.0
+
+- Added microapp message.
+
 ## Release 2.4.0
 
 - Moved microapp functions out of experimental, into its own handler.
