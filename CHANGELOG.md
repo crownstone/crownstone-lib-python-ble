@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.6.0
+
+- Made microapp commands available over the mesh.
+
 ## Release 2.5.0
 
 - Added microapp message.
