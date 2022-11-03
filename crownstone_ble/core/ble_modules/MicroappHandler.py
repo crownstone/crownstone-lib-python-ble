@@ -42,28 +42,46 @@ class MicroappHandler:
         header = MicroappHeaderPacket(appIndex=index, protocol=protocol)
         packet = MicroappUploadPacket(header, offset, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_UPLOAD).loadByteArray(packet.serialize()).serialize()
-        await self.control._writeControlAndWaitForSuccess(controlPacket)
+        await self._sendCommand(controlPacket)
         _LOGGER.info(f"uploaded chunk offset={offset}")
 
-    async def validateMicroapp(self, index, protocol):
+    async def validateMicroapp(self, index: int, protocol: int, crownstoneId: int = None):
+        # Validate an uploaded microapp.
+        # When the crownstone ID is given, the command will be sent via the mesh.
         packet = MicroappHeaderPacket(index, protocol)
         controlPacket = ControlPacket(ControlType.MICROAPP_VALIDATE).loadByteArray(packet.serialize()).serialize()
-        await self.control._writeControlAndGetResult(controlPacket)
+        await self._sendCommand(controlPacket, crownstoneId)
 
-    async def enableMicroapp(self, index, protocol):
+    async def enableMicroapp(self, index: int, protocol: int, crownstoneId: int = None):
+        # Enable a validated microapp.
+        # When the crownstone ID is given, the command will be sent via the mesh.
         packet = MicroappHeaderPacket(index, protocol)
         controlPacket = ControlPacket(ControlType.MICROAPP_ENABLE).loadByteArray(packet.serialize()).serialize()
-        await self.control._writeControlAndGetResult(controlPacket)
+        await self._sendCommand(controlPacket, crownstoneId)
 
-    async def removeMicroapp(self, index, protocol):
+    async def disableMicroapp(self, index: int, protocol: int, crownstoneId: int = None):
+        # Disable a microapp.
+        # When the crownstone ID is given, the command will be sent via the mesh.
+        packet = MicroappHeaderPacket(index, protocol)
+        controlPacket = ControlPacket(ControlType.MICROAPP_DISABLE).loadByteArray(packet.serialize()).serialize()
+        await self._sendCommand(controlPacket, crownstoneId)
+
+    async def removeMicroapp(self, index: int, protocol: int, crownstoneId: int = None):
+        # Remove a microapp.
+        # When the crownstone ID is given, the command will be sent via the mesh.
         packet = MicroappHeaderPacket(index, protocol)
         controlPacket = ControlPacket(ControlType.MICROAPP_REMOVE).loadByteArray(packet.serialize()).serialize()
-        await self.control._writeControlAndWaitForSuccess(controlPacket)
-        _LOGGER.info(f"Removed app {index}")
+        await self._sendCommand(controlPacket, crownstoneId)
 
     async def sendMessage(self, index: int, protocol: int, data: bytearray):
         _LOGGER.info(f"Send message to microapp index={index}")
         header = MicroappHeaderPacket(appIndex=index, protocol=protocol)
         packet = MicroappMessagePacket(header, data)
         controlPacket = ControlPacket(ControlType.MICROAPP_MESSAGE).loadByteArray(packet.serialize()).serialize()
-        await self.control._writeControlAndWaitForSuccess(controlPacket)
+        await self._sendCommand(controlPacket)
+
+    async def _sendCommand(self, controlPacket, crownstoneId: int = None):
+        if crownstoneId is None:
+            await self.control._writeControlAndWaitForSuccess(controlPacket)
+        else:
+            await self.control._sendViaMesh(controlPacket, [crownstoneId])

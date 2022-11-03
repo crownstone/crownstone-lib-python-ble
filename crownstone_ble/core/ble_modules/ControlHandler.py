@@ -10,9 +10,11 @@ from crownstone_core.packets.assetFilter.util.AssetFilterChunker import FilterCh
 from crownstone_core.packets.assetFilter.util.AssetFilterSyncer import AssetFilterSyncer
 from crownstone_core.packets.ResultPacket import ResultPacket
 from crownstone_core.packets.SessionDataPacket import SessionDataPacket
-from crownstone_core.protocol.BluenetTypes import ProcessType, ResultValue
+from crownstone_core.protocol.BlePackets import ControlPacket
+from crownstone_core.protocol.BluenetTypes import ProcessType, ResultValue, ControlType
 from crownstone_core.protocol.Characteristics import CrownstoneCharacteristics, SetupCharacteristics
 from crownstone_core.protocol.ControlPackets import ControlPacketsGenerator
+from crownstone_core.protocol.MeshPackets import MeshBroadcastAckedPacket, MeshBroadcastPacket
 from crownstone_core.protocol.Services import CSServices
 from crownstone_core.util.EncryptionHandler import EncryptionHandler, CHECKSUM
 
@@ -231,6 +233,26 @@ class ControlHandler:
         masterCrc = AssetFilterMasterCrc.get_master_crc_from_filters(filters, filterSummaries)
         await self._writeControlAndGetResult(ControlPacketsGenerator.getCommitFilterChangesPacket(masterVersion, masterCrc))
 
+    async def _sendViaMesh(self, packet: bytearray, crownstoneIds: List[int] = None):
+        """
+        Send a control packet over the mesh.
+        Note that only some control commands are allowed.
+        The result of the control command at the target crownstone is not returned by this function.
+
+        @param packet: The packet with the control command to send.
+        @param crownstoneIds:
+            - When None, the command will be sent to every crownstone in the mesh.
+            - When more than 1 IDs is given, the command will be sent and handled by every crownstone, but the command will be retried
+              until every ID in the list has acked the command (or until timeout).
+            - When only 1 ID is given, the command is sent to that crownstone only, and will be retried until it acked, or until timeout.
+        """
+        meshPacket = None
+        if crownstoneIds is None:
+            meshPacket = MeshBroadcastPacket(packet).serialize()
+        else:
+            meshPacket = MeshBroadcastAckedPacket(crownstoneIds, packet).serialize()
+        controlPacket = ControlPacket(ControlType.MESH_COMMAND).loadByteArray(meshPacket).serialize()
+        await self._writeControlAndWaitForSuccess(controlPacket)
 
 
     ##############################################
