@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.6.1
+
+- Fixed bug when connecting while already connected.
+
 ## Release 2.6.0
 
 - Made microapp commands available over the mesh.
