@@ -100,6 +100,11 @@ class CrownstoneBle:
         :param attempts:          Number of connection attempts.
         :param ignoreEncryption:  True when encryption will not be used for this session.
         """
+        connected = await self.ble.is_connected(address)
+        if connected:
+            _LOGGER.info("Already connected")
+            return
+
         await self.ble.connect(address, timeout=timeout, attempts=attempts)
         if not ignoreEncryption:
             await self.control._getAndSetSessionNonce()

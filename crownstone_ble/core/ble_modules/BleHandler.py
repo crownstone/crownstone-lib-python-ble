@@ -144,13 +144,19 @@ class BleHandler:
 
 
     async def connect(self, address, timeout: int = 5, attempts: int = 3) -> bool:
+        """
+        @param address:   MAC address to connect to.
+        @param timeout:   Timeout in seconds.
+        @param attempts:  Number of connection attempts.
+        @return:          True on successful connect.
+        """
         # Always clean up cached setup key for a new connection.
         self.settings.exitSetup()
 
         connected = await self.is_connected(address)
         if connected:
             _LOGGER.info("Already connected")
-            return
+            return True
 
         # TODO: Check if activeClient is already set.
         self.activeClient = ActiveClient(address, lambda: self.resetClient(), self.bleAdapterAddress)
