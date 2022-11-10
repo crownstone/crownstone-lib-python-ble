@@ -1,5 +1,9 @@
 # Changelog
 
+## Release 2.6.2
+
+- Fixed buf when receiving same notification multiple times, while waiting for multiple result packets.
+
 ## Release 2.6.1
 
 - Fixed bug when connecting while already connected.
