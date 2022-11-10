@@ -66,6 +66,10 @@ class SetupHandler:
         await self.core.ble.writeToCharacteristic(CSServices.SetupService, SetupCharacteristics.SetupControl, packet)
 
     def _handleResult(self, result):
+        if result is None:
+            _LOGGER.debug("Ignore invalid notification data")
+            return ProcessType.CONTINUE
+
         response = ResultPacket(result)
         if response.valid:
             if response.resultCode == ResultValue.WAIT_FOR_SUCCESS:

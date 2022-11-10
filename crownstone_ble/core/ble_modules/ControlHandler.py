@@ -299,6 +299,10 @@ class ControlHandler:
         :param acceptedResultValues:   List of result values that are considered a success.
         """
         def handleResult(notificationData):
+            if notificationData is None:
+                _LOGGER.debug("Ignore invalid notification data")
+                return ProcessType.CONTINUE
+
             result = ResultPacket(notificationData)
             if result.valid:
                 if result.resultCode == ResultValue.WAIT_FOR_SUCCESS:
